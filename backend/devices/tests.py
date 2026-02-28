@@ -68,6 +68,13 @@ class DeviceModelTests(TestCase):
         devices = list(Device.objects.values_list("name", flat=True))
         self.assertEqual(devices, ["alpha", "zebra"])
 
+    def test_create_device_without_api_endpoint(self):
+        device = Device.objects.create(
+            name="no-endpoint",
+            hostname="no-endpoint.local",
+        )
+        self.assertEqual(device.api_endpoint, "")
+
 
 class DeviceHeaderModelTests(TestCase):
     """Tests for the DeviceHeader model."""

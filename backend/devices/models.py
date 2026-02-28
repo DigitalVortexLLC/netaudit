@@ -17,7 +17,7 @@ class DeviceGroup(models.Model):
 class Device(models.Model):
     name = models.CharField(max_length=255, unique=True)
     hostname = models.CharField(max_length=255)
-    api_endpoint = models.URLField()
+    api_endpoint = models.URLField(blank=True, default="")
     enabled = models.BooleanField(default=True)
     groups = models.ManyToManyField(
         "DeviceGroup",
