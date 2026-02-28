@@ -75,6 +75,51 @@ class DeviceModelTests(TestCase):
         )
         self.assertEqual(device.api_endpoint, "")
 
+    def test_effective_api_endpoint_uses_own_endpoint(self):
+        device = Device.objects.create(
+            name="custom-ep",
+            hostname="custom.local",
+            api_endpoint="https://custom.local/api",
+        )
+        self.assertEqual(device.effective_api_endpoint, "https://custom.local/api")
+
+    def test_effective_api_endpoint_uses_default_when_blank(self):
+        from settings.models import SiteSettings
+        site = SiteSettings.load()
+        site.default_api_endpoint = "https://default.example.com/api"
+        site.save()
+
+        device = Device.objects.create(
+            name="switch-99",
+            hostname="switch-99.local",
+        )
+        self.assertEqual(
+            device.effective_api_endpoint,
+            "https://default.example.com/api/switch-99",
+        )
+
+    def test_effective_api_endpoint_strips_trailing_slash(self):
+        from settings.models import SiteSettings
+        site = SiteSettings.load()
+        site.default_api_endpoint = "https://default.example.com/api/"
+        site.save()
+
+        device = Device.objects.create(
+            name="switch-100",
+            hostname="switch-100.local",
+        )
+        self.assertEqual(
+            device.effective_api_endpoint,
+            "https://default.example.com/api/switch-100",
+        )
+
+    def test_effective_api_endpoint_empty_when_no_config(self):
+        device = Device.objects.create(
+            name="orphan",
+            hostname="orphan.local",
+        )
+        self.assertEqual(device.effective_api_endpoint, "")
+
 
 class DeviceHeaderModelTests(TestCase):
     """Tests for the DeviceHeader model."""
