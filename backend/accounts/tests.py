@@ -1,6 +1,11 @@
+from unittest.mock import Mock
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import TestCase
+from rest_framework.test import APIRequestFactory
+
+from accounts.permissions import IsAdminRole, IsEditorOrAbove, IsViewerOrAbove
 
 User = get_user_model()
 
@@ -76,3 +81,48 @@ class RoleGroupSyncTests(TestCase):
         user_groups = set(user.groups.values_list("name", flat=True))
         # User should only be in their role group (among role groups)
         self.assertEqual(user_groups & role_groups, {"admin"})
+
+
+class PermissionTests(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.admin = User.objects.create_user(
+            username="padmin", email="padmin@test.com", password="testpass123",
+            role="admin",
+        )
+        self.editor = User.objects.create_user(
+            username="peditor", email="peditor@test.com", password="testpass123",
+            role="editor",
+        )
+        self.viewer = User.objects.create_user(
+            username="pviewer", email="pviewer@test.com", password="testpass123",
+            role="viewer",
+        )
+
+    def _request_for(self, user):
+        request = self.factory.get("/")
+        request.user = user
+        return request
+
+    def test_admin_permission(self):
+        perm = IsAdminRole()
+        self.assertTrue(perm.has_permission(self._request_for(self.admin), None))
+        self.assertFalse(perm.has_permission(self._request_for(self.editor), None))
+        self.assertFalse(perm.has_permission(self._request_for(self.viewer), None))
+
+    def test_editor_or_above_permission(self):
+        perm = IsEditorOrAbove()
+        self.assertTrue(perm.has_permission(self._request_for(self.admin), None))
+        self.assertTrue(perm.has_permission(self._request_for(self.editor), None))
+        self.assertFalse(perm.has_permission(self._request_for(self.viewer), None))
+
+    def test_viewer_or_above_permission(self):
+        perm = IsViewerOrAbove()
+        self.assertTrue(perm.has_permission(self._request_for(self.admin), None))
+        self.assertTrue(perm.has_permission(self._request_for(self.editor), None))
+        self.assertTrue(perm.has_permission(self._request_for(self.viewer), None))
+
+    def test_unauthenticated_denied(self):
+        request = self.factory.get("/")
+        request.user = Mock(is_authenticated=False)
+        self.assertFalse(IsViewerOrAbove().has_permission(request, None))
