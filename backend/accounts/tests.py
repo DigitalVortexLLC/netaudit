@@ -44,3 +44,35 @@ class UserModelTests(TestCase):
         )
         self.assertIsNotNone(user.created_at)
         self.assertIsNotNone(user.updated_at)
+
+
+class RoleGroupSyncTests(TestCase):
+    def test_saving_user_creates_group_and_adds_membership(self):
+        user = User.objects.create_user(
+            username="g1", email="g1@test.com", password="testpass123",
+            role="editor",
+        )
+        self.assertTrue(Group.objects.filter(name="editor").exists())
+        self.assertTrue(user.groups.filter(name="editor").exists())
+
+    def test_changing_role_updates_group(self):
+        user = User.objects.create_user(
+            username="g2", email="g2@test.com", password="testpass123",
+            role="viewer",
+        )
+        self.assertTrue(user.groups.filter(name="viewer").exists())
+        user.role = "admin"
+        user.save()
+        user.refresh_from_db()
+        self.assertTrue(user.groups.filter(name="admin").exists())
+        self.assertFalse(user.groups.filter(name="viewer").exists())
+
+    def test_role_group_has_no_extra_groups(self):
+        user = User.objects.create_user(
+            username="g3", email="g3@test.com", password="testpass123",
+            role="admin",
+        )
+        role_groups = {"admin", "editor", "viewer"}
+        user_groups = set(user.groups.values_list("name", flat=True))
+        # User should only be in their role group (among role groups)
+        self.assertEqual(user_groups & role_groups, {"admin"})
