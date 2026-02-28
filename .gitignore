@@ -1,0 +1,14 @@
+# Worktrees
+.worktrees/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+
+# SQLite
+*.sqlite3
+
+# Environment
+.env
