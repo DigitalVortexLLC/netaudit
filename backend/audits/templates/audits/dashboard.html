@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load badge_tags %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Dashboard</h2>
+</div>
+
+<div class="cards-row">
+    <div class="summary-card">
+        <div class="value">{{ device_count }}</div>
+        <div class="label">Devices</div>
+    </div>
+    <div class="summary-card">
+        <div class="value">{{ recent_audit_count }}</div>
+        <div class="label">Audits (24h)</div>
+    </div>
+    <div class="summary-card">
+        <div class="value">{{ pass_rate }}%</div>
+        <div class="label">Pass Rate (7d)</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Recent Audits</h3>
+    {% if recent_audits %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Device</th>
+                <th>Status</th>
+                <th>Trigger</th>
+                <th>Summary</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for audit in recent_audits %}
+            <tr>
+                <td><a href="{% url 'device-detail-html' audit.device.pk %}">{{ audit.device }}</a></td>
+                <td>{{ audit.status|badge }}</td>
+                <td>{{ audit.trigger|badge }}</td>
+                <td>
+                    {% if audit.summary %}
+                        {{ audit.summary.passed|default:"0" }} passed, {{ audit.summary.failed|default:"0" }} failed
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </td>
+                <td><a href="{% url 'auditrun-detail-html' audit.pk %}">{{ audit.created_at|date:"N j, Y H:i" }}</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No recent audits found.</div>
+    {% endif %}
+</div>
+{% endblock %}

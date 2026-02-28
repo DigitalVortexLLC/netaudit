@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load badge_tags %}
+
+{% block title %}Devices — Netaudit{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Devices</h2>
+    <a href="{% url 'device-create-html' %}" class="btn btn-primary">Add Device</a>
+</div>
+
+{% if devices %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Hostname</th>
+            <th>Endpoint</th>
+            <th>Enabled</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for device in devices %}
+        <tr>
+            <td><a href="{% url 'device-detail-html' device.pk %}">{{ device.name }}</a></td>
+            <td>{{ device.hostname }}</td>
+            <td>{{ device.api_endpoint }}</td>
+            <td>{{ device.enabled|enabled_badge }}</td>
+            <td>
+                <div class="btn-group">
+                    <a href="{% url 'device-update-html' device.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+                    <button class="btn btn-danger btn-sm"
+                            hx-post="{% url 'device-delete-html' device.pk %}"
+                            hx-confirm="Are you sure you want to delete &quot;{{ device.name }}&quot;?">
+                        Delete
+                    </button>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No devices configured yet.</p>
+    <a href="{% url 'device-create-html' %}" class="btn btn-primary">Add your first device</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,9 @@
+{% if valid %}
+<div class="result-box result-success">
+    Syntax is valid
+</div>
+{% else %}
+<div class="result-box result-error">
+    Syntax error: {{ error }}
+</div>
+{% endif %}

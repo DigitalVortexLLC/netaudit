@@ -1,0 +1,20 @@
+import json
+import pytest
+from pathlib import Path
+
+RULES_FILE = Path(__file__).parent / "_rules.json"
+CONFIG_FILE = Path(__file__).parent / "_config.txt"
+
+
+@pytest.fixture(scope="session")
+def device_config():
+    """The device configuration text to audit."""
+    return CONFIG_FILE.read_text()
+
+
+def pytest_generate_tests(metafunc):
+    """Parametrize simple rules from the rules JSON file."""
+    if "rule_data" in metafunc.fixturenames:
+        rules = json.loads(RULES_FILE.read_text())
+        ids = [f"rule-{r['id']}-{r['name']}" for r in rules]
+        metafunc.parametrize("rule_data", rules, ids=ids)

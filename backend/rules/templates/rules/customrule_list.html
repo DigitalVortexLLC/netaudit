@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load badge_tags %}
+
+{% block title %}Custom Rules{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Custom Rules</h2>
+    <a href="{% url 'customrule-create-html' %}" class="btn btn-primary">Add Custom Rule</a>
+</div>
+
+{% if rules %}
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Filename</th>
+                <th>Severity</th>
+                <th>Device</th>
+                <th>Enabled</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rule in rules %}
+            <tr>
+                <td>{{ rule.name }}</td>
+                <td><code>{{ rule.filename }}</code></td>
+                <td>{{ rule.severity|severity_badge }}</td>
+                <td>{{ rule.device|default:"Global" }}</td>
+                <td>{{ rule.enabled|enabled_badge }}</td>
+                <td>
+                    <div class="btn-group">
+                        <a href="{% url 'customrule-update-html' rule.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+                        <button class="btn btn-sm btn-primary"
+                                hx-post="{% url 'customrule-validate-html' rule.pk %}"
+                                hx-target="#validate-result-{{ rule.pk }}"
+                                hx-swap="innerHTML">
+                            Validate
+                        </button>
+                        <button class="btn btn-sm btn-danger"
+                                hx-post="{% url 'customrule-delete-html' rule.pk %}"
+                                hx-confirm="Are you sure you want to delete &quot;{{ rule.name }}&quot;?">
+                            Delete
+                        </button>
+                    </div>
+                    <div id="validate-result-{{ rule.pk }}"></div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No custom rules defined yet.</p>
+    <a href="{% url 'customrule-create-html' %}" class="btn btn-primary">Add Custom Rule</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load badge_tags %}
+
+{% block title %}Simple Rules{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Simple Rules</h2>
+    <a href="{% url 'simplerule-create-html' %}" class="btn btn-primary">Add Simple Rule</a>
+</div>
+
+{% if rules %}
+<div class="card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Rule Type</th>
+                <th>Pattern</th>
+                <th>Severity</th>
+                <th>Device</th>
+                <th>Enabled</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rule in rules %}
+            <tr>
+                <td>{{ rule.name }}</td>
+                <td>{{ rule.get_rule_type_display|badge }}</td>
+                <td><code>{{ rule.pattern|truncatechars:60 }}</code></td>
+                <td>{{ rule.severity|severity_badge }}</td>
+                <td>{{ rule.device|default:"Global" }}</td>
+                <td>{{ rule.enabled|enabled_badge }}</td>
+                <td>
+                    <div class="btn-group">
+                        <a href="{% url 'simplerule-update-html' rule.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+                        <button class="btn btn-sm btn-danger"
+                                hx-post="{% url 'simplerule-delete-html' rule.pk %}"
+                                hx-confirm="Are you sure you want to delete &quot;{{ rule.name }}&quot;?">
+                            Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No simple rules defined yet.</p>
+    <a href="{% url 'simplerule-create-html' %}" class="btn btn-primary">Add Simple Rule</a>
+</div>
+{% endif %}
+{% endblock %}

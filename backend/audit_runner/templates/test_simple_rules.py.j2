@@ -1,0 +1,27 @@
+import re
+
+
+def test_simple_rule(device_config, rule_data):
+    """Run a simple pattern-based rule against the device config."""
+    pattern = rule_data["pattern"]
+    rule_type = rule_data["rule_type"]
+    name = rule_data["name"]
+
+    if rule_type == "must_contain":
+        assert pattern in device_config, (
+            f"Rule '{name}': Config must contain '{pattern}'"
+        )
+    elif rule_type == "must_not_contain":
+        assert pattern not in device_config, (
+            f"Rule '{name}': Config must not contain '{pattern}'"
+        )
+    elif rule_type == "regex_match":
+        assert re.search(pattern, device_config, re.MULTILINE), (
+            f"Rule '{name}': Config must match regex '{pattern}'"
+        )
+    elif rule_type == "regex_no_match":
+        assert not re.search(pattern, device_config, re.MULTILINE), (
+            f"Rule '{name}': Config must not match regex '{pattern}'"
+        )
+    else:
+        pytest.fail(f"Unknown rule type: {rule_type}")

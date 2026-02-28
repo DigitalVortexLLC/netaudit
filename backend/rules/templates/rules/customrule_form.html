@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Edit Custom Rule{% else %}Add Custom Rule{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{% if object %}Edit Custom Rule{% else %}Add Custom Rule{% endif %}</h2>
+</div>
+
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="{{ form.name.id_for_label }}">Name</label>
+            {{ form.name }}
+            {% if form.name.errors %}{{ form.name.errors }}{% endif %}
+            {% if form.name.help_text %}<span class="helptext">{{ form.name.help_text }}</span>{% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.description.id_for_label }}">Description</label>
+            {{ form.description }}
+            {% if form.description.errors %}{{ form.description.errors }}{% endif %}
+            {% if form.description.help_text %}<span class="helptext">{{ form.description.help_text }}</span>{% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.filename.id_for_label }}">Filename</label>
+            {{ form.filename }}
+            {% if form.filename.errors %}{{ form.filename.errors }}{% endif %}
+            {% if form.filename.help_text %}<span class="helptext">{{ form.filename.help_text }}</span>{% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.content.id_for_label }}">Content</label>
+            {{ form.content }}
+            {% if form.content.errors %}{{ form.content.errors }}{% endif %}
+            {% if form.content.help_text %}<span class="helptext">{{ form.content.help_text }}</span>{% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.severity.id_for_label }}">Severity</label>
+            {{ form.severity }}
+            {% if form.severity.errors %}{{ form.severity.errors }}{% endif %}
+            {% if form.severity.help_text %}<span class="helptext">{{ form.severity.help_text }}</span>{% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.device.id_for_label }}">Device</label>
+            {{ form.device }}
+            {% if form.device.errors %}{{ form.device.errors }}{% endif %}
+            {% if form.device.help_text %}<span class="helptext">{{ form.device.help_text }}</span>{% endif %}
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-label">{{ form.enabled }} Enabled</label>
+        </div>
+
+        {% if object %}
+        <div class="form-group">
+            <button type="button" class="btn btn-secondary"
+                    hx-post="{% url 'customrule-validate-html' object.pk %}"
+                    hx-target="#validate-result"
+                    hx-swap="innerHTML">
+                Validate Syntax
+            </button>
+            <div id="validate-result"></div>
+        </div>
+        {% endif %}
+
+        <div class="actions">
+            <button type="submit" class="btn btn-success">{% if object %}Update{% else %}Create{% endif %}</button>
+            <a href="{% url 'customrule-list-html' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
