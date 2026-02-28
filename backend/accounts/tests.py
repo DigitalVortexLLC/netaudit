@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from rest_framework.test import APIRequestFactory
 
 from accounts.permissions import IsAdminRole, IsEditorOrAbove, IsViewerOrAbove
@@ -126,3 +126,62 @@ class PermissionTests(TestCase):
         request = self.factory.get("/")
         request.user = Mock(is_authenticated=False)
         self.assertFalse(IsViewerOrAbove().has_permission(request, None))
+
+
+class AuthHookMiddlewareTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = User.objects.create_user(
+            username="mwuser", email="mw@test.com", password="testpass123",
+        )
+
+    def test_hooks_called_in_order(self):
+        """Verify pre_authenticate and post_authenticate are called."""
+        from accounts.middleware import AuthHookMiddleware
+
+        call_log = []
+
+        class TestHook:
+            def pre_authenticate(self, request):
+                call_log.append("pre")
+
+            def post_authenticate(self, request):
+                call_log.append("post")
+
+            def on_response(self, request, response):
+                call_log.append("response")
+
+        def get_response(request):
+            from django.http import HttpResponse
+            return HttpResponse("ok")
+
+        middleware = AuthHookMiddleware(get_response)
+        middleware._hooks = [TestHook()]
+
+        request = self.factory.get("/")
+        request.user = self.user
+        response = middleware(request)
+
+        self.assertEqual(call_log, ["pre", "post", "response"])
+
+    def test_pre_authenticate_can_short_circuit(self):
+        """If pre_authenticate returns a response, skip the view."""
+        from accounts.middleware import AuthHookMiddleware
+
+        class BlockingHook:
+            def pre_authenticate(self, request):
+                from django.http import HttpResponseForbidden
+                return HttpResponseForbidden("blocked")
+
+        def get_response(request):
+            from django.http import HttpResponse
+            return HttpResponse("ok")
+
+        middleware = AuthHookMiddleware(get_response)
+        middleware._hooks = [BlockingHook()]
+
+        request = self.factory.get("/")
+        request.user = self.user
+        response = middleware(request)
+
+        self.assertEqual(response.status_code, 403)

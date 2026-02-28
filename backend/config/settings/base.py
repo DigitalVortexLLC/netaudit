@@ -43,6 +43,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
+    "accounts.middleware.AuthHookMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -107,3 +108,6 @@ Q_CLUSTER = {
 
 # Audit runner settings
 AUDIT_RUNNER_TIMEOUT = int(os.environ.get("AUDIT_RUNNER_TIMEOUT", "300"))
+
+# Auth hook classes — loaded by AuthHookMiddleware
+AUTH_HOOKS = []
