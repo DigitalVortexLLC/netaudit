@@ -268,6 +268,17 @@ class DeviceAPITests(APITestCase):
     """Tests for the Device REST API endpoints."""
 
     def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@test.com",
+            password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+
         self.device = Device.objects.create(
             name="api-device",
             hostname="api.local",
@@ -560,6 +571,17 @@ class DeviceGroupAPITests(APITestCase):
     """Tests for the DeviceGroup REST API endpoints."""
 
     def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@test.com",
+            password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+
         self.group = DeviceGroup.objects.create(
             name="Edge Routers",
             description="All edge routers",
@@ -636,6 +658,13 @@ class DeviceGroupRunAuditAPITests(APITestCase):
     """Tests for the run_audit action on DeviceGroupViewSet."""
 
     def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser", email="test@test.com", password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
         self.group = DeviceGroup.objects.create(name="Edge Routers")
         self.device1 = Device.objects.create(
             name="r1", hostname="r1.local", api_endpoint="https://r1.local/api", enabled=True,

@@ -3,8 +3,11 @@ import ast
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView, UpdateView
+
+from accounts.decorators import RoleRequiredMixin, role_required
 
 from .forms import CustomRuleForm, SimpleRuleForm
 from .models import CustomRule, SimpleRule
@@ -15,13 +18,15 @@ from .models import CustomRule, SimpleRule
 # ---------------------------------------------------------------------------
 
 
-class SimpleRuleListView(ListView):
+class SimpleRuleListView(LoginRequiredMixin, ListView):
     model = SimpleRule
     template_name = "rules/simplerule_list.html"
     context_object_name = "rules"
 
 
-class SimpleRuleCreateView(CreateView):
+class SimpleRuleCreateView(RoleRequiredMixin, CreateView):
+    min_role = "editor"
+
     model = SimpleRule
     form_class = SimpleRuleForm
     template_name = "rules/simplerule_form.html"
@@ -33,7 +38,9 @@ class SimpleRuleCreateView(CreateView):
         return response
 
 
-class SimpleRuleUpdateView(UpdateView):
+class SimpleRuleUpdateView(RoleRequiredMixin, UpdateView):
+    min_role = "editor"
+
     model = SimpleRule
     form_class = SimpleRuleForm
     template_name = "rules/simplerule_form.html"
@@ -45,6 +52,7 @@ class SimpleRuleUpdateView(UpdateView):
         return response
 
 
+@role_required("editor")
 @require_POST
 def simple_rule_delete(request, pk):
     rule = get_object_or_404(SimpleRule, pk=pk)
@@ -58,13 +66,15 @@ def simple_rule_delete(request, pk):
 # ---------------------------------------------------------------------------
 
 
-class CustomRuleListView(ListView):
+class CustomRuleListView(LoginRequiredMixin, ListView):
     model = CustomRule
     template_name = "rules/customrule_list.html"
     context_object_name = "rules"
 
 
-class CustomRuleCreateView(CreateView):
+class CustomRuleCreateView(RoleRequiredMixin, CreateView):
+    min_role = "editor"
+
     model = CustomRule
     form_class = CustomRuleForm
     template_name = "rules/customrule_form.html"
@@ -76,7 +86,9 @@ class CustomRuleCreateView(CreateView):
         return response
 
 
-class CustomRuleUpdateView(UpdateView):
+class CustomRuleUpdateView(RoleRequiredMixin, UpdateView):
+    min_role = "editor"
+
     model = CustomRule
     form_class = CustomRuleForm
     template_name = "rules/customrule_form.html"
@@ -88,6 +100,7 @@ class CustomRuleUpdateView(UpdateView):
         return response
 
 
+@role_required("editor")
 @require_POST
 def custom_rule_delete(request, pk):
     rule = get_object_or_404(CustomRule, pk=pk)
@@ -96,6 +109,7 @@ def custom_rule_delete(request, pk):
     return redirect("customrule-list-html")
 
 
+@role_required("viewer")
 @require_POST
 def custom_rule_validate(request, pk):
     rule = get_object_or_404(CustomRule, pk=pk)

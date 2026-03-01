@@ -3,6 +3,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from accounts.permissions import IsEditorOrAbove, IsViewerOrAbove
 from audits import tasks as audit_tasks
 
 from .models import Device, DeviceGroup
@@ -13,6 +14,11 @@ class DeviceGroupViewSet(viewsets.ModelViewSet):
     queryset = DeviceGroup.objects.prefetch_related("devices").all()
     serializer_class = DeviceGroupSerializer
     search_fields = ["name", "description"]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsViewerOrAbove()]
+        return [IsEditorOrAbove()]
 
     @action(detail=True, methods=["post"])
     def run_audit(self, request, pk=None):
@@ -32,6 +38,11 @@ class DeviceViewSet(viewsets.ModelViewSet):
     filterset_fields = ["enabled"]
     search_fields = ["name", "hostname"]
     ordering_fields = ["name", "created_at"]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsViewerOrAbove()]
+        return [IsEditorOrAbove()]
 
     @action(detail=True, methods=["post"])
     def test_connection(self, request, pk=None):

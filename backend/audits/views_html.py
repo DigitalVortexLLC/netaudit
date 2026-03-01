@@ -3,14 +3,17 @@ from datetime import timedelta
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import CreateView, DetailView, ListView, TemplateView, UpdateView
+
+from accounts.decorators import RoleRequiredMixin, role_required
 
 from .forms import AuditScheduleForm
 from .models import AuditRun, AuditSchedule
 
 
-class DashboardView(TemplateView):
+class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "audits/dashboard.html"
 
     def get_context_data(self, **kwargs):
@@ -58,7 +61,7 @@ class DashboardView(TemplateView):
         return context
 
 
-class AuditRunListView(ListView):
+class AuditRunListView(LoginRequiredMixin, ListView):
     model = AuditRun
     template_name = "audits/auditrun_list.html"
     context_object_name = "auditrun_list"
@@ -72,7 +75,7 @@ class AuditRunListView(ListView):
         return context
 
 
-class AuditRunDetailView(DetailView):
+class AuditRunDetailView(LoginRequiredMixin, DetailView):
     model = AuditRun
     template_name = "audits/auditrun_detail.html"
     context_object_name = "object"
@@ -85,6 +88,7 @@ class AuditRunDetailView(DetailView):
         return context
 
 
+@role_required("viewer")
 @require_GET
 def audit_run_status_fragment(request, pk):
     from django.template.response import TemplateResponse
@@ -97,6 +101,7 @@ def audit_run_status_fragment(request, pk):
     )
 
 
+@role_required("viewer")
 @require_GET
 def audit_run_config(request, pk):
     from django.template.response import TemplateResponse
@@ -109,14 +114,16 @@ def audit_run_config(request, pk):
     )
 
 
-class ScheduleListView(ListView):
+class ScheduleListView(LoginRequiredMixin, ListView):
     model = AuditSchedule
     template_name = "audits/schedule_list.html"
     context_object_name = "schedule_list"
     queryset = AuditSchedule.objects.select_related("device")
 
 
-class ScheduleCreateView(CreateView):
+class ScheduleCreateView(RoleRequiredMixin, CreateView):
+    min_role = "editor"
+
     model = AuditSchedule
     form_class = AuditScheduleForm
     template_name = "audits/schedule_form.html"
@@ -135,7 +142,9 @@ class ScheduleCreateView(CreateView):
         return reverse("schedule-list-html")
 
 
-class ScheduleUpdateView(UpdateView):
+class ScheduleUpdateView(RoleRequiredMixin, UpdateView):
+    min_role = "editor"
+
     model = AuditSchedule
     form_class = AuditScheduleForm
     template_name = "audits/schedule_form.html"
@@ -155,6 +164,7 @@ class ScheduleUpdateView(UpdateView):
         return reverse("schedule-list-html")
 
 
+@role_required("editor")
 @require_POST
 def schedule_delete(request, pk):
     schedule = get_object_or_404(AuditSchedule, pk=pk)

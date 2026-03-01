@@ -1,11 +1,13 @@
 import requests as http_requests
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.views import generic
 from django.views.decorators.http import require_POST
 
+from accounts.decorators import RoleRequiredMixin, role_required
 from audits.tasks import enqueue_audit
 
 from .forms import DeviceForm, DeviceGroupForm, DeviceHeaderFormSet
@@ -84,7 +86,7 @@ def group_run_audit(request, pk):
     return HttpResponse(html)
 
 
-class DeviceListView(generic.ListView):
+class DeviceListView(LoginRequiredMixin, generic.ListView):
     model = Device
     template_name = "devices/device_list.html"
     context_object_name = "devices"
@@ -93,7 +95,9 @@ class DeviceListView(generic.ListView):
         return Device.objects.prefetch_related("headers", "groups").all()
 
 
-class DeviceCreateView(generic.CreateView):
+class DeviceCreateView(RoleRequiredMixin, generic.CreateView):
+    min_role = "editor"
+
     model = Device
     form_class = DeviceForm
     template_name = "devices/device_form.html"
@@ -120,7 +124,9 @@ class DeviceCreateView(generic.CreateView):
         return self.form_invalid(form)
 
 
-class DeviceUpdateView(generic.UpdateView):
+class DeviceUpdateView(RoleRequiredMixin, generic.UpdateView):
+    min_role = "editor"
+
     model = Device
     form_class = DeviceForm
     template_name = "devices/device_form.html"
@@ -149,7 +155,7 @@ class DeviceUpdateView(generic.UpdateView):
         return self.form_invalid(form)
 
 
-class DeviceDetailView(generic.DetailView):
+class DeviceDetailView(LoginRequiredMixin, generic.DetailView):
     model = Device
     template_name = "devices/device_detail.html"
     context_object_name = "device"
@@ -166,6 +172,7 @@ class DeviceDetailView(generic.DetailView):
         return ctx
 
 
+@role_required("editor")
 @require_POST
 def device_delete(request, pk):
     device = get_object_or_404(Device, pk=pk)
@@ -175,6 +182,7 @@ def device_delete(request, pk):
     return redirect("device-list-html")
 
 
+@role_required("editor")
 @require_POST
 def device_test_connection(request, pk):
     device = get_object_or_404(Device, pk=pk)
@@ -210,6 +218,7 @@ def device_test_connection(request, pk):
     return HttpResponse(html)
 
 
+@role_required("editor")
 @require_POST
 def device_run_audit(request, pk):
     device = get_object_or_404(Device, pk=pk)
@@ -223,6 +232,7 @@ def device_run_audit(request, pk):
     return HttpResponse(html)
 
 
+@role_required("editor")
 def device_header_add(request):
     index = request.GET.get("index", "0")
     html = render_to_string(
