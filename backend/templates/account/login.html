@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Login — Netaudit{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <h2>Login</h2>
+    <form method="post" action="{% url 'account_login' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Sign In</button>
+    </form>
+    {% if passkey_login_enabled %}
+    <div class="passkey-login">
+        <p>Or sign in with a passkey:</p>
+        <button id="passkey-login-btn" class="btn btn-secondary"
+                hx-post="{% url 'mfa_login_webauthn' %}"
+                hx-target=".auth-container">
+            Sign in with Passkey
+        </button>
+    </div>
+    {% endif %}
+    <p><a href="{% url 'account_signup' %}">Create an account</a></p>
+    <p><a href="{% url 'account_reset_password' %}">Forgot password?</a></p>
+</div>
+{% endblock %}

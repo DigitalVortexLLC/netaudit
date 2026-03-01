@@ -1,4 +1,4 @@
-{% load nav_tags %}
+{% load nav_tags badge_tags %}
 <nav class="sidebar">
     <div class="sidebar-header">
         <h1>Netaudit</h1>
@@ -10,5 +10,25 @@
         <li><a href="{% url 'customrule-list-html' %}" class="{% active_class request '/rules/custom/' %}">Custom Rules</a></li>
         <li><a href="{% url 'auditrun-list-html' %}" class="{% active_class request '/audits/' %}">Audits</a></li>
         <li><a href="{% url 'schedule-list-html' %}" class="{% active_class request '/schedules/' %}">Schedules</a></li>
+        {% if user_role == "admin" %}
+        <li><a href="{% url 'user-list' %}" class="{% active_class request '/accounts/users/' %}">Users</a></li>
+        {% endif %}
     </ul>
+    {% if user.is_authenticated %}
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <span class="sidebar-username">{{ user.username }}</span>
+            {{ user.role|badge }}
+        </div>
+        <ul class="sidebar-nav">
+            <li><a href="{% url 'profile' %}">Profile</a></li>
+            <li>
+                <form method="post" action="{% url 'account_logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="sidebar-logout-btn">Logout</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+    {% endif %}
 </nav>
