@@ -918,8 +918,53 @@ class DashboardSummaryAPITests(AuditFixtureMixin, APITestCase):
 
     def test_dashboard_summary_response_keys(self):
         response = self.client.get(self.url)
-        expected_keys = {"device_count", "recent_audit_count", "pass_rate"}
+        expected_keys = {"device_count", "recent_audit_count", "pass_rate", "failed_rule_count_24h"}
         self.assertEqual(set(response.data.keys()), expected_keys)
+
+    def test_summary_returns_failed_rule_count(self):
+        """failed_rule_count_24h should count failed RuleResults from the last 24h."""
+        run = self.create_audit_run(
+            device=self.device,
+            status=AuditRun.Status.COMPLETED,
+            summary={"passed": 3, "failed": 2, "error": 0},
+        )
+        run.completed_at = timezone.now()
+        run.save()
+
+        RuleResult.objects.create(
+            audit_run=run, test_node_id="t1", outcome="failed",
+            message="fail", severity="high",
+        )
+        RuleResult.objects.create(
+            audit_run=run, test_node_id="t2", outcome="failed",
+            message="fail", severity="medium",
+        )
+        RuleResult.objects.create(
+            audit_run=run, test_node_id="t3", outcome="passed",
+            message="ok", severity="low",
+        )
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["failed_rule_count_24h"], 2)
+
+    def test_summary_excludes_old_failures(self):
+        """failed_rule_count_24h should exclude failures older than 24h."""
+        run = self.create_audit_run(
+            device=self.device,
+            status=AuditRun.Status.COMPLETED,
+            summary={"passed": 0, "failed": 1, "error": 0},
+        )
+        run.completed_at = timezone.now() - timedelta(hours=25)
+        run.save()
+
+        RuleResult.objects.create(
+            audit_run=run, test_node_id="t1", outcome="failed",
+            message="old fail", severity="high",
+        )
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.data["failed_rule_count_24h"], 0)
 
 
 # ===========================================================================

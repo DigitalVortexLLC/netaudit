@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import IsEditorOrAbove, IsViewerOrAbove
-from audits.models import AuditRun, AuditSchedule
+from audits.models import AuditRun, AuditSchedule, RuleResult
 from audits.serializers import (
     AuditRunCreateSerializer,
     AuditRunDetailSerializer,
@@ -121,10 +121,16 @@ class DashboardSummaryView(APIView):
         else:
             pass_rate = 0.0
 
+        failed_rule_count_24h = RuleResult.objects.filter(
+            outcome=RuleResult.Outcome.FAILED,
+            audit_run__completed_at__gte=last_24h,
+        ).count()
+
         return Response(
             {
                 "device_count": device_count,
                 "recent_audit_count": recent_audit_count,
                 "pass_rate": pass_rate,
+                "failed_rule_count_24h": failed_rule_count_24h,
             }
         )
