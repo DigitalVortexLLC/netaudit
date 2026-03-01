@@ -23,7 +23,15 @@
         <dd>{{ device.hostname }}</dd>
 
         <dt>API Endpoint</dt>
-        <dd>{{ device.api_endpoint }}</dd>
+        <dd>
+            {{ device.effective_api_endpoint }}
+            {% if not device.api_endpoint and device.effective_api_endpoint %}
+                <span class="badge badge-info">default</span>
+            {% endif %}
+            {% if not device.effective_api_endpoint %}
+                <span style="color: #ef5350;">Not configured</span>
+            {% endif %}
+        </dd>
 
         <dt>Enabled</dt>
         <dd>{{ device.enabled|enabled_badge }}</dd>
