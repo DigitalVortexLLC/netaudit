@@ -578,3 +578,49 @@ class DeviceGroupAPITests(APITestCase):
         url = reverse("devicegroup-detail", kwargs={"pk": 99999})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class DeviceGroupRunAuditAPITests(APITestCase):
+    """Tests for the run_audit action on DeviceGroupViewSet."""
+
+    def setUp(self):
+        self.group = DeviceGroup.objects.create(name="Edge Routers")
+        self.device1 = Device.objects.create(
+            name="r1", hostname="r1.local", api_endpoint="https://r1.local/api", enabled=True,
+        )
+        self.device2 = Device.objects.create(
+            name="r2", hostname="r2.local", api_endpoint="https://r2.local/api", enabled=True,
+        )
+        self.disabled_device = Device.objects.create(
+            name="r3", hostname="r3.local", api_endpoint="https://r3.local/api", enabled=False,
+        )
+        self.group.devices.add(self.device1, self.device2, self.disabled_device)
+
+    @patch("audits.tasks.enqueue_audit")
+    def test_run_audit_enqueues_for_enabled_devices(self, mock_enqueue):
+        url = reverse("devicegroup-run-audit", kwargs={"pk": self.group.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(mock_enqueue.call_count, 2)
+        called_ids = {call.args[0] for call in mock_enqueue.call_args_list}
+        self.assertEqual(called_ids, {self.device1.id, self.device2.id})
+
+    @patch("audits.tasks.enqueue_audit")
+    def test_run_audit_returns_device_count(self, mock_enqueue):
+        url = reverse("devicegroup-run-audit", kwargs={"pk": self.group.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.data["audits_started"], 2)
+
+    @patch("audits.tasks.enqueue_audit")
+    def test_run_audit_empty_group(self, mock_enqueue):
+        empty_group = DeviceGroup.objects.create(name="Empty")
+        url = reverse("devicegroup-run-audit", kwargs={"pk": empty_group.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["audits_started"], 0)
+        mock_enqueue.assert_not_called()
+
+    def test_run_audit_not_found(self):
+        url = reverse("devicegroup-run-audit", kwargs={"pk": 99999})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

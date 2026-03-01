@@ -3,6 +3,8 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from audits import tasks as audit_tasks
+
 from .models import Device, DeviceGroup
 from .serializers import DeviceGroupSerializer, DeviceSerializer
 
@@ -11,6 +13,17 @@ class DeviceGroupViewSet(viewsets.ModelViewSet):
     queryset = DeviceGroup.objects.prefetch_related("devices").all()
     serializer_class = DeviceGroupSerializer
     search_fields = ["name", "description"]
+
+    @action(detail=True, methods=["post"])
+    def run_audit(self, request, pk=None):
+        group = self.get_object()
+        devices = group.devices.filter(enabled=True)
+        for device in devices:
+            audit_tasks.enqueue_audit(device.id, trigger="manual")
+        return Response({
+            "audits_started": devices.count(),
+            "group": group.name,
+        })
 
 
 class DeviceViewSet(viewsets.ModelViewSet):
