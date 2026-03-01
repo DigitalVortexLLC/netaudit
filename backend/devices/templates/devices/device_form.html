@@ -46,6 +46,14 @@
             <div class="form-errors">{{ form.enabled.errors }}</div>
             {% endif %}
         </div>
+
+        <div class="form-group">
+            <label>Groups</label>
+            {{ form.groups }}
+            {% if form.groups.errors %}
+            <div class="form-errors">{{ form.groups.errors }}</div>
+            {% endif %}
+        </div>
     </div>
 
     <div class="card" id="headers-card">

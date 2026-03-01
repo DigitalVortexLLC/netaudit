@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load badge_tags %}
+
+{% block title %}{{ group.name }} — Netaudit{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ group.name }}</h2>
+    <div class="btn-group">
+        <a href="{% url 'group-update-html' group.pk %}" class="btn btn-secondary">Edit</a>
+        <button class="btn btn-danger"
+                hx-post="{% url 'group-delete-html' group.pk %}"
+                hx-confirm="Are you sure you want to delete &quot;{{ group.name }}&quot;?">
+            Delete
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Group Information</h3>
+    <dl class="detail-grid">
+        <dt>Description</dt>
+        <dd>{{ group.description|default:"—" }}</dd>
+
+        <dt>Created</dt>
+        <dd>{{ group.created_at }}</dd>
+
+        <dt>Updated</dt>
+        <dd>{{ group.updated_at }}</dd>
+    </dl>
+</div>
+
+<div class="card">
+    <h3>Actions</h3>
+    <div class="btn-group">
+        <button class="btn btn-primary"
+                hx-post="{% url 'group-run-audit-html' group.pk %}"
+                hx-target="#audit-result"
+                hx-indicator="#audit-spinner">
+            Run Audit on All Devices
+            <span id="audit-spinner" class="htmx-indicator spinner"></span>
+        </button>
+    </div>
+    <div id="audit-result"></div>
+</div>
+
+<div class="card">
+    <h3>Devices ({{ devices|length }})</h3>
+    {% if devices %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Hostname</th>
+                <th>Enabled</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for device in devices %}
+            <tr>
+                <td><a href="{% url 'device-detail-html' device.pk %}">{{ device.name }}</a></td>
+                <td>{{ device.hostname }}</td>
+                <td>{{ device.enabled|enabled_badge }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No devices in this group yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Rules</h3>
+
+    {% if simple_rules %}
+    <h4>Simple Rules</h4>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Severity</th>
+                <th>Enabled</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rule in simple_rules %}
+            <tr>
+                <td><a href="{% url 'simplerule-detail-html' rule.pk %}">{{ rule.name }}</a></td>
+                <td>{{ rule.get_rule_type_display }}</td>
+                <td>{{ rule.severity|severity_badge }}</td>
+                <td>{{ rule.enabled|enabled_badge }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if custom_rules %}
+    <h4>Custom Rules</h4>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Filename</th>
+                <th>Severity</th>
+                <th>Enabled</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rule in custom_rules %}
+            <tr>
+                <td><a href="{% url 'customrule-detail-html' rule.pk %}">{{ rule.name }}</a></td>
+                <td>{{ rule.filename }}</td>
+                <td>{{ rule.severity|severity_badge }}</td>
+                <td>{{ rule.enabled|enabled_badge }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if not simple_rules and not custom_rules %}
+    <div class="empty-state">
+        <p>No rules are scoped to this group.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

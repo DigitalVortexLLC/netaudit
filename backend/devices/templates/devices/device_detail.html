@@ -66,6 +66,17 @@
 </div>
 {% endif %}
 
+{% if device.groups.all %}
+<div class="card">
+    <h3>Groups</h3>
+    <ul>
+        {% for group in device.groups.all %}
+        <li><a href="{% url 'group-detail-html' group.pk %}">{{ group.name }}</a></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 <div class="card">
     <h3>Actions</h3>
     <div class="btn-group">

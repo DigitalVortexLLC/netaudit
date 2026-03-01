@@ -11,6 +11,7 @@ urlpatterns = [
     # HTML views
     path("", include("audits.urls_html")),
     path("devices/", include("devices.urls_html")),
+    path("groups/", include("devices.urls_html_groups")),
     path("rules/", include("rules.urls_html")),
     path("schedules/", include("audits.urls_html_schedules")),
     path("settings/", include("settings.urls_html")),

@@ -6,6 +6,7 @@
     <ul class="sidebar-nav">
         <li><a href="{% url 'dashboard' %}" class="{% active_class request '/' exact=True %}">Dashboard</a></li>
         <li><a href="{% url 'device-list-html' %}" class="{% active_class request '/devices/' %}">Devices</a></li>
+        <li><a href="{% url 'group-list-html' %}" class="{% active_class request '/groups/' %}">Groups</a></li>
         <li><a href="{% url 'simplerule-list-html' %}" class="{% active_class request '/rules/simple/' %}">Simple Rules</a></li>
         <li><a href="{% url 'customrule-list-html' %}" class="{% active_class request '/rules/custom/' %}">Custom Rules</a></li>
         <li><a href="{% url 'auditrun-list-html' %}" class="{% active_class request '/audits/' %}">Audits</a></li>

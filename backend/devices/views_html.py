@@ -8,8 +8,80 @@ from django.views.decorators.http import require_POST
 
 from audits.tasks import enqueue_audit
 
-from .forms import DeviceForm, DeviceHeaderFormSet
-from .models import Device
+from .forms import DeviceForm, DeviceGroupForm, DeviceHeaderFormSet
+from .models import Device, DeviceGroup
+
+
+class DeviceGroupListView(generic.ListView):
+    model = DeviceGroup
+    template_name = "devices/group_list.html"
+    context_object_name = "groups"
+
+    def get_queryset(self):
+        return DeviceGroup.objects.prefetch_related("devices").all()
+
+
+class DeviceGroupCreateView(generic.CreateView):
+    model = DeviceGroup
+    form_class = DeviceGroupForm
+    template_name = "devices/group_form.html"
+
+    def form_valid(self, form):
+        group = form.save()
+        messages.success(self.request, f'Group "{group.name}" created.')
+        return redirect("group-list-html")
+
+
+class DeviceGroupUpdateView(generic.UpdateView):
+    model = DeviceGroup
+    form_class = DeviceGroupForm
+    template_name = "devices/group_form.html"
+
+    def form_valid(self, form):
+        group = form.save()
+        messages.success(self.request, f'Group "{group.name}" updated.')
+        return redirect("group-list-html")
+
+
+class DeviceGroupDetailView(generic.DetailView):
+    model = DeviceGroup
+    template_name = "devices/group_detail.html"
+    context_object_name = "group"
+
+    def get_queryset(self):
+        return DeviceGroup.objects.prefetch_related("devices")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        group = self.object
+        ctx["devices"] = group.devices.all()
+        ctx["simple_rules"] = group.simple_rules.all()
+        ctx["custom_rules"] = group.custom_rules.all()
+        return ctx
+
+
+@require_POST
+def group_delete(request, pk):
+    group = get_object_or_404(DeviceGroup, pk=pk)
+    name = group.name
+    group.delete()
+    messages.success(request, f'Group "{name}" deleted.')
+    return redirect("group-list-html")
+
+
+@require_POST
+def group_run_audit(request, pk):
+    group = get_object_or_404(DeviceGroup, pk=pk)
+    devices = group.devices.filter(enabled=True)
+    count = 0
+    for device in devices:
+        enqueue_audit(device.id, trigger="manual")
+        count += 1
+    html = render_to_string(
+        "devices/partials/audit_started.html",
+        {"device": None, "group": group, "count": count},
+    )
+    return HttpResponse(html)
 
 
 class DeviceListView(generic.ListView):
@@ -18,7 +90,7 @@ class DeviceListView(generic.ListView):
     context_object_name = "devices"
 
     def get_queryset(self):
-        return Device.objects.prefetch_related("headers").all()
+        return Device.objects.prefetch_related("headers", "groups").all()
 
 
 class DeviceCreateView(generic.CreateView):
@@ -83,7 +155,7 @@ class DeviceDetailView(generic.DetailView):
     context_object_name = "device"
 
     def get_queryset(self):
-        return Device.objects.prefetch_related("headers")
+        return Device.objects.prefetch_related("headers", "groups")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
