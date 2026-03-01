@@ -6,7 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Device, DeviceHeader
+from .models import Device, DeviceGroup, DeviceHeader
 
 
 class DeviceModelTests(TestCase):
@@ -129,6 +129,87 @@ class DeviceHeaderModelTests(TestCase):
         headers = self.device.headers.all()
         self.assertEqual(headers.count(), 1)
         self.assertEqual(headers.first().key, "X-Api-Key")
+
+
+class DeviceGroupModelTests(TestCase):
+    """Tests for the DeviceGroup model."""
+
+    def test_create_group(self):
+        group = DeviceGroup.objects.create(
+            name="Edge Routers",
+            description="All edge routers",
+        )
+        self.assertEqual(group.name, "Edge Routers")
+        self.assertEqual(group.description, "All edge routers")
+        self.assertIsNotNone(group.created_at)
+        self.assertIsNotNone(group.updated_at)
+
+    def test_group_str(self):
+        group = DeviceGroup.objects.create(name="Core Switches")
+        self.assertEqual(str(group), "Core Switches")
+
+    def test_group_unique_name(self):
+        DeviceGroup.objects.create(name="unique-group")
+        with self.assertRaises(IntegrityError):
+            DeviceGroup.objects.create(name="unique-group")
+
+    def test_group_ordering(self):
+        DeviceGroup.objects.create(name="Zebra")
+        DeviceGroup.objects.create(name="Alpha")
+        groups = list(DeviceGroup.objects.values_list("name", flat=True))
+        self.assertEqual(groups, ["Alpha", "Zebra"])
+
+    def test_group_description_blank(self):
+        group = DeviceGroup.objects.create(name="No Desc")
+        self.assertEqual(group.description, "")
+
+
+class DeviceGroupMembershipTests(TestCase):
+    """Tests for the M2M relationship between Device and DeviceGroup."""
+
+    def setUp(self):
+        self.device1 = Device.objects.create(
+            name="switch-01",
+            hostname="switch-01.local",
+            api_endpoint="https://switch-01.local/api",
+        )
+        self.device2 = Device.objects.create(
+            name="switch-02",
+            hostname="switch-02.local",
+            api_endpoint="https://switch-02.local/api",
+        )
+        self.group = DeviceGroup.objects.create(name="Switches")
+
+    def test_add_device_to_group(self):
+        self.device1.groups.add(self.group)
+        self.assertIn(self.group, self.device1.groups.all())
+        self.assertIn(self.device1, self.group.devices.all())
+
+    def test_device_multiple_groups(self):
+        group2 = DeviceGroup.objects.create(name="Datacenter A")
+        self.device1.groups.add(self.group, group2)
+        self.assertEqual(self.device1.groups.count(), 2)
+
+    def test_group_multiple_devices(self):
+        self.group.devices.add(self.device1, self.device2)
+        self.assertEqual(self.group.devices.count(), 2)
+
+    def test_remove_device_from_group(self):
+        self.device1.groups.add(self.group)
+        self.device1.groups.remove(self.group)
+        self.assertEqual(self.device1.groups.count(), 0)
+
+    def test_delete_group_does_not_delete_devices(self):
+        self.device1.groups.add(self.group)
+        self.group.delete()
+        self.assertTrue(Device.objects.filter(pk=self.device1.pk).exists())
+        self.assertEqual(self.device1.groups.count(), 0)
+
+    def test_delete_device_does_not_delete_group(self):
+        self.device1.groups.add(self.group)
+        self.device1.delete()
+        self.assertTrue(DeviceGroup.objects.filter(pk=self.group.pk).exists())
+        self.assertEqual(self.group.devices.count(), 0)
 
 
 class DeviceAPITests(APITestCase):
