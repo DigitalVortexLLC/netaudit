@@ -31,18 +31,23 @@ export function LoginPage() {
       <div className="flex max-w-[900px] w-full min-h-[520px] rounded-2xl overflow-hidden shadow-2xl">
         {/* Brand panel */}
         <div
-          className="hidden md:flex flex-col justify-center items-center p-10 relative overflow-hidden"
+          className="hidden md:flex flex-col justify-between items-center p-10 relative overflow-hidden"
           style={{
             flex: "0 0 40%",
             background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
           }}
         >
+          <div className="flex-1" />
           <div className="relative text-center">
             <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">Netaudit</h1>
             <p className="text-[#b0b0c8] text-lg font-light leading-relaxed">
-              Network Configuration<br />Audit Platform
+              Network Compliance,<br />Automated.
             </p>
           </div>
+          <div className="flex-1" />
+          <p className="text-[#64b5f6] text-xs opacity-70 text-center">
+            Continuous auditing for network device configurations
+          </p>
         </div>
 
         {/* Form panel */}
@@ -61,7 +66,7 @@ export function LoginPage() {
               <div className="mb-4">
                 <input
                   type="text"
-                  placeholder="Username"
+                  placeholder="Username or email"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -83,8 +88,13 @@ export function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#b0b0c8] transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? "Hide" : "Show"}
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                    {showPassword && <path d="M1 1l22 22" />}
+                  </svg>
                 </button>
               </div>
 
@@ -109,6 +119,22 @@ export function LoginPage() {
                 {loading ? "Signing in..." : "Sign In"}
               </button>
             </form>
+
+            <div className="flex items-center gap-4 my-5">
+              <div className="flex-1 h-px bg-[#3a3a5a]" />
+              <span className="text-[#666] text-xs">or</span>
+              <div className="flex-1 h-px bg-[#3a3a5a]" />
+            </div>
+
+            <button
+              type="button"
+              className="w-full py-3 rounded-[10px] text-sm font-semibold text-white cursor-pointer transition-colors"
+              style={{ background: "#2a2a4a", border: "1px solid #3a3a5a" }}
+              onMouseOver={(e) => ((e.target as HTMLElement).style.background = "#35355a")}
+              onMouseOut={(e) => ((e.target as HTMLElement).style.background = "#2a2a4a")}
+            >
+              Sign in with Passkey
+            </button>
 
             <div className="mt-6 text-center text-sm text-[#888]">
               <p>
