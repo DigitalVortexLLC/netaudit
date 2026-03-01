@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type {
   AuditRun, AuditRunDetail, AuditStatus,
-  DashboardSummary, PaginatedResponse,
+  DashboardSummary, PaginatedResponse, RuleResult,
 } from "@/types";
 
 const IN_PROGRESS_STATUSES: AuditStatus[] = ["pending", "fetching_config", "running_rules"];
@@ -63,6 +63,54 @@ export function useDashboardSummary() {
     queryFn: async () => {
       const response = await api.get<DashboardSummary>("/dashboard/summary/");
       return response.data;
+    },
+  });
+}
+
+export function useCompletedAudits(days: number) {
+  return useQuery({
+    queryKey: ["audits", "completed", days],
+    queryFn: async () => {
+      const response = await api.get<PaginatedResponse<AuditRun>>("/audits/", {
+        params: {
+          status: "completed",
+          ordering: "-completed_at",
+          page_size: "500",
+        },
+      });
+      return response.data;
+    },
+  });
+}
+
+export type IssueRow = RuleResult & { device_name: string; audit_id: number; audit_date: string };
+
+export function useRecentIssues() {
+  return useQuery({
+    queryKey: ["recent-issues"],
+    queryFn: async () => {
+      const auditsRes = await api.get<PaginatedResponse<AuditRun>>("/audits/", {
+        params: { status: "completed", ordering: "-completed_at", page_size: "5" },
+      });
+      const details = await Promise.all(
+        auditsRes.data.results.map((a) =>
+          api.get<AuditRunDetail>(`/audits/${a.id}/`).then((r) => r.data)
+        )
+      );
+      const issues: IssueRow[] = [];
+      for (const audit of details) {
+        for (const result of audit.results) {
+          if (result.outcome === "failed" || result.outcome === "error") {
+            issues.push({
+              ...result,
+              device_name: audit.device_name,
+              audit_id: audit.id,
+              audit_date: audit.created_at,
+            });
+          }
+        }
+      }
+      return issues.slice(0, 20);
     },
   });
 }

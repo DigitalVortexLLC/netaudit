@@ -44,4 +44,5 @@ export interface DashboardSummary {
   device_count: number;
   recent_audit_count: number;
   pass_rate: number;
+  failed_rule_count_24h: number;
 }
