@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import type { DeviceGroup, DeviceGroupFormData, PaginatedResponse } from "@/types";
 
@@ -30,7 +31,11 @@ export function useCreateGroup() {
       const response = await api.post<DeviceGroup>("/groups/", data);
       return response.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Group created");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -44,7 +49,9 @@ export function useUpdateGroup(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["groups"] });
       queryClient.invalidateQueries({ queryKey: ["groups", id] });
+      toast.success("Group updated");
     },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -54,7 +61,11 @@ export function useDeleteGroup() {
     mutationFn: async (id: number) => {
       await api.delete(`/groups/${id}/`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Group deleted");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -65,6 +76,10 @@ export function useRunGroupAudit(id: number) {
       const response = await api.post(`/groups/${id}/run_audit/`);
       return response.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["audits"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["audits"] });
+      toast.success("Group audit started");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }

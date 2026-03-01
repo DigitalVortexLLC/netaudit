@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import type { AuditSchedule, AuditScheduleFormData, PaginatedResponse } from "@/types";
 
@@ -30,7 +31,11 @@ export function useCreateSchedule() {
       const response = await api.post<AuditSchedule>("/schedules/", data);
       return response.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["schedules"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      toast.success("Schedule created");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -44,7 +49,9 @@ export function useUpdateSchedule(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
       queryClient.invalidateQueries({ queryKey: ["schedules", id] });
+      toast.success("Schedule updated");
     },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -54,6 +61,10 @@ export function useDeleteSchedule() {
     mutationFn: async (id: number) => {
       await api.delete(`/schedules/${id}/`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["schedules"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      toast.success("Schedule deleted");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }

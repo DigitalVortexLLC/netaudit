@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import type { Device, DeviceFormData, PaginatedResponse, TestConnectionResult } from "@/types";
 
@@ -30,7 +31,11 @@ export function useCreateDevice() {
       const response = await api.post<Device>("/devices/", data);
       return response.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["devices"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["devices"] });
+      toast.success("Device created");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -44,7 +49,9 @@ export function useUpdateDevice(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["devices"] });
       queryClient.invalidateQueries({ queryKey: ["devices", id] });
+      toast.success("Device updated");
     },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -54,7 +61,11 @@ export function useDeleteDevice() {
     mutationFn: async (id: number) => {
       await api.delete(`/devices/${id}/`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["devices"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["devices"] });
+      toast.success("Device deleted");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }
 

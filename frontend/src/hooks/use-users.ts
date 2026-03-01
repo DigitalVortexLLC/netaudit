@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import type { User, PaginatedResponse } from "@/types";
 
@@ -33,6 +34,8 @@ export function useUpdateUser(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["users", id] });
+      toast.success("User updated");
     },
+    onError: () => toast.error("Operation failed"),
   });
 }

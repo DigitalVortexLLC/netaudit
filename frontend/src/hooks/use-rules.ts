@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import type {
   SimpleRule, SimpleRuleFormData,
@@ -35,7 +36,11 @@ export function useCreateSimpleRule() {
       const response = await api.post<SimpleRule>("/rules/simple/", data);
       return response.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["simple-rules"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["simple-rules"] });
+      toast.success("Simple rule created");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -49,7 +54,9 @@ export function useUpdateSimpleRule(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["simple-rules"] });
       queryClient.invalidateQueries({ queryKey: ["simple-rules", id] });
+      toast.success("Simple rule updated");
     },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -59,7 +66,11 @@ export function useDeleteSimpleRule() {
     mutationFn: async (id: number) => {
       await api.delete(`/rules/simple/${id}/`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["simple-rules"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["simple-rules"] });
+      toast.success("Simple rule deleted");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -92,7 +103,11 @@ export function useCreateCustomRule() {
       const response = await api.post<CustomRule>("/rules/custom/", data);
       return response.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["custom-rules"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["custom-rules"] });
+      toast.success("Custom rule created");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -106,7 +121,9 @@ export function useUpdateCustomRule(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["custom-rules"] });
       queryClient.invalidateQueries({ queryKey: ["custom-rules", id] });
+      toast.success("Custom rule updated");
     },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
@@ -116,7 +133,11 @@ export function useDeleteCustomRule() {
     mutationFn: async (id: number) => {
       await api.delete(`/rules/custom/${id}/`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["custom-rules"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["custom-rules"] });
+      toast.success("Custom rule deleted");
+    },
+    onError: () => toast.error("Operation failed"),
   });
 }
 
