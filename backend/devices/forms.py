@@ -9,6 +9,13 @@ class DeviceForm(forms.ModelForm):
         model = Device
         fields = ["name", "hostname", "api_endpoint", "enabled"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["api_endpoint"].required = False
+        self.fields["api_endpoint"].help_text = (
+            "Leave blank to use the default endpoint."
+        )
+
 
 DeviceHeaderFormSet = inlineformset_factory(
     Device,

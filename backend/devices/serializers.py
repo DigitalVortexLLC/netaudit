@@ -33,6 +33,7 @@ class DeviceSerializer(serializers.ModelSerializer):
     groups = serializers.PrimaryKeyRelatedField(
         many=True, queryset=DeviceGroup.objects.all(), required=False,
     )
+    effective_api_endpoint = serializers.CharField(read_only=True)
 
     class Meta:
         model = Device
@@ -41,6 +42,7 @@ class DeviceSerializer(serializers.ModelSerializer):
             "name",
             "hostname",
             "api_endpoint",
+            "effective_api_endpoint",
             "enabled",
             "headers",
             "groups",
