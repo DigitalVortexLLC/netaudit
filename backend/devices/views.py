@@ -3,8 +3,14 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Device
-from .serializers import DeviceSerializer
+from .models import Device, DeviceGroup
+from .serializers import DeviceGroupSerializer, DeviceSerializer
+
+
+class DeviceGroupViewSet(viewsets.ModelViewSet):
+    queryset = DeviceGroup.objects.prefetch_related("devices").all()
+    serializer_class = DeviceGroupSerializer
+    search_fields = ["name", "description"]
 
 
 class DeviceViewSet(viewsets.ModelViewSet):

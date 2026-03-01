@@ -502,3 +502,79 @@ class DeviceAPITests(APITestCase):
         url = reverse("device-test-connection", kwargs={"pk": 99999})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class DeviceGroupAPITests(APITestCase):
+    """Tests for the DeviceGroup REST API endpoints."""
+
+    def setUp(self):
+        self.group = DeviceGroup.objects.create(
+            name="Edge Routers",
+            description="All edge routers",
+        )
+        self.list_url = reverse("devicegroup-list")
+        self.detail_url = reverse("devicegroup-detail", kwargs={"pk": self.group.pk})
+
+    def test_list_groups(self):
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["name"], "Edge Routers")
+
+    def test_list_groups_includes_device_count(self):
+        device = Device.objects.create(
+            name="d1", hostname="d1.local", api_endpoint="https://d1.local/api",
+        )
+        device.groups.add(self.group)
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.data["results"][0]["device_count"], 1)
+
+    def test_create_group(self):
+        data = {"name": "Core Switches", "description": "Core layer"}
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(DeviceGroup.objects.count(), 2)
+
+    def test_create_group_duplicate_name_fails(self):
+        data = {"name": "Edge Routers"}
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrieve_group(self):
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["name"], "Edge Routers")
+        self.assertIn("devices", response.data)
+
+    def test_retrieve_group_includes_device_ids(self):
+        device = Device.objects.create(
+            name="d1", hostname="d1.local", api_endpoint="https://d1.local/api",
+        )
+        device.groups.add(self.group)
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.data["devices"], [device.pk])
+
+    def test_update_group(self):
+        data = {"name": "Updated Name", "description": "Updated desc"}
+        response = self.client.put(self.detail_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.name, "Updated Name")
+
+    def test_partial_update_group(self):
+        response = self.client.patch(
+            self.detail_url, {"description": "New desc"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.description, "New desc")
+
+    def test_delete_group(self):
+        response = self.client.delete(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(DeviceGroup.objects.filter(pk=self.group.pk).exists())
+
+    def test_delete_group_not_found(self):
+        url = reverse("devicegroup-detail", kwargs={"pk": 99999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
