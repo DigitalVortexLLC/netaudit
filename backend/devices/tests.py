@@ -6,7 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Device, DeviceHeader
+from .models import Device, DeviceGroup, DeviceHeader
 
 
 class DeviceModelTests(TestCase):
@@ -67,6 +67,58 @@ class DeviceModelTests(TestCase):
         )
         devices = list(Device.objects.values_list("name", flat=True))
         self.assertEqual(devices, ["alpha", "zebra"])
+
+    def test_create_device_without_api_endpoint(self):
+        device = Device.objects.create(
+            name="no-endpoint",
+            hostname="no-endpoint.local",
+        )
+        self.assertEqual(device.api_endpoint, "")
+
+    def test_effective_api_endpoint_uses_own_endpoint(self):
+        device = Device.objects.create(
+            name="custom-ep",
+            hostname="custom.local",
+            api_endpoint="https://custom.local/api",
+        )
+        self.assertEqual(device.effective_api_endpoint, "https://custom.local/api")
+
+    def test_effective_api_endpoint_uses_default_when_blank(self):
+        from settings.models import SiteSettings
+        site = SiteSettings.load()
+        site.default_api_endpoint = "https://default.example.com/api"
+        site.save()
+
+        device = Device.objects.create(
+            name="switch-99",
+            hostname="switch-99.local",
+        )
+        self.assertEqual(
+            device.effective_api_endpoint,
+            "https://default.example.com/api/switch-99",
+        )
+
+    def test_effective_api_endpoint_strips_trailing_slash(self):
+        from settings.models import SiteSettings
+        site = SiteSettings.load()
+        site.default_api_endpoint = "https://default.example.com/api/"
+        site.save()
+
+        device = Device.objects.create(
+            name="switch-100",
+            hostname="switch-100.local",
+        )
+        self.assertEqual(
+            device.effective_api_endpoint,
+            "https://default.example.com/api/switch-100",
+        )
+
+    def test_effective_api_endpoint_empty_when_no_config(self):
+        device = Device.objects.create(
+            name="orphan",
+            hostname="orphan.local",
+        )
+        self.assertEqual(device.effective_api_endpoint, "")
 
 
 class DeviceHeaderModelTests(TestCase):
@@ -131,10 +183,102 @@ class DeviceHeaderModelTests(TestCase):
         self.assertEqual(headers.first().key, "X-Api-Key")
 
 
+class DeviceGroupModelTests(TestCase):
+    """Tests for the DeviceGroup model."""
+
+    def test_create_group(self):
+        group = DeviceGroup.objects.create(
+            name="Edge Routers",
+            description="All edge routers",
+        )
+        self.assertEqual(group.name, "Edge Routers")
+        self.assertEqual(group.description, "All edge routers")
+        self.assertIsNotNone(group.created_at)
+        self.assertIsNotNone(group.updated_at)
+
+    def test_group_str(self):
+        group = DeviceGroup.objects.create(name="Core Switches")
+        self.assertEqual(str(group), "Core Switches")
+
+    def test_group_unique_name(self):
+        DeviceGroup.objects.create(name="unique-group")
+        with self.assertRaises(IntegrityError):
+            DeviceGroup.objects.create(name="unique-group")
+
+    def test_group_ordering(self):
+        DeviceGroup.objects.create(name="Zebra")
+        DeviceGroup.objects.create(name="Alpha")
+        groups = list(DeviceGroup.objects.values_list("name", flat=True))
+        self.assertEqual(groups, ["Alpha", "Zebra"])
+
+    def test_group_description_blank(self):
+        group = DeviceGroup.objects.create(name="No Desc")
+        self.assertEqual(group.description, "")
+
+
+class DeviceGroupMembershipTests(TestCase):
+    """Tests for the M2M relationship between Device and DeviceGroup."""
+
+    def setUp(self):
+        self.device1 = Device.objects.create(
+            name="switch-01",
+            hostname="switch-01.local",
+            api_endpoint="https://switch-01.local/api",
+        )
+        self.device2 = Device.objects.create(
+            name="switch-02",
+            hostname="switch-02.local",
+            api_endpoint="https://switch-02.local/api",
+        )
+        self.group = DeviceGroup.objects.create(name="Switches")
+
+    def test_add_device_to_group(self):
+        self.device1.groups.add(self.group)
+        self.assertIn(self.group, self.device1.groups.all())
+        self.assertIn(self.device1, self.group.devices.all())
+
+    def test_device_multiple_groups(self):
+        group2 = DeviceGroup.objects.create(name="Datacenter A")
+        self.device1.groups.add(self.group, group2)
+        self.assertEqual(self.device1.groups.count(), 2)
+
+    def test_group_multiple_devices(self):
+        self.group.devices.add(self.device1, self.device2)
+        self.assertEqual(self.group.devices.count(), 2)
+
+    def test_remove_device_from_group(self):
+        self.device1.groups.add(self.group)
+        self.device1.groups.remove(self.group)
+        self.assertEqual(self.device1.groups.count(), 0)
+
+    def test_delete_group_does_not_delete_devices(self):
+        self.device1.groups.add(self.group)
+        self.group.delete()
+        self.assertTrue(Device.objects.filter(pk=self.device1.pk).exists())
+        self.assertEqual(self.device1.groups.count(), 0)
+
+    def test_delete_device_does_not_delete_group(self):
+        self.device1.groups.add(self.group)
+        self.device1.delete()
+        self.assertTrue(DeviceGroup.objects.filter(pk=self.group.pk).exists())
+        self.assertEqual(self.group.devices.count(), 0)
+
+
 class DeviceAPITests(APITestCase):
     """Tests for the Device REST API endpoints."""
 
     def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@test.com",
+            password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+
         self.device = Device.objects.create(
             name="api-device",
             hostname="api.local",
@@ -419,5 +563,145 @@ class DeviceAPITests(APITestCase):
 
     def test_test_connection_device_not_found(self):
         url = reverse("device-test-connection", kwargs={"pk": 99999})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class DeviceGroupAPITests(APITestCase):
+    """Tests for the DeviceGroup REST API endpoints."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@test.com",
+            password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+
+        self.group = DeviceGroup.objects.create(
+            name="Edge Routers",
+            description="All edge routers",
+        )
+        self.list_url = reverse("devicegroup-list")
+        self.detail_url = reverse("devicegroup-detail", kwargs={"pk": self.group.pk})
+
+    def test_list_groups(self):
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["name"], "Edge Routers")
+
+    def test_list_groups_includes_device_count(self):
+        device = Device.objects.create(
+            name="d1", hostname="d1.local", api_endpoint="https://d1.local/api",
+        )
+        device.groups.add(self.group)
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.data["results"][0]["device_count"], 1)
+
+    def test_create_group(self):
+        data = {"name": "Core Switches", "description": "Core layer"}
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(DeviceGroup.objects.count(), 2)
+
+    def test_create_group_duplicate_name_fails(self):
+        data = {"name": "Edge Routers"}
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrieve_group(self):
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["name"], "Edge Routers")
+        self.assertIn("devices", response.data)
+
+    def test_retrieve_group_includes_device_ids(self):
+        device = Device.objects.create(
+            name="d1", hostname="d1.local", api_endpoint="https://d1.local/api",
+        )
+        device.groups.add(self.group)
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.data["devices"], [device.pk])
+
+    def test_update_group(self):
+        data = {"name": "Updated Name", "description": "Updated desc"}
+        response = self.client.put(self.detail_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.name, "Updated Name")
+
+    def test_partial_update_group(self):
+        response = self.client.patch(
+            self.detail_url, {"description": "New desc"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.group.refresh_from_db()
+        self.assertEqual(self.group.description, "New desc")
+
+    def test_delete_group(self):
+        response = self.client.delete(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(DeviceGroup.objects.filter(pk=self.group.pk).exists())
+
+    def test_delete_group_not_found(self):
+        url = reverse("devicegroup-detail", kwargs={"pk": 99999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class DeviceGroupRunAuditAPITests(APITestCase):
+    """Tests for the run_audit action on DeviceGroupViewSet."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser", email="test@test.com", password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+        self.group = DeviceGroup.objects.create(name="Edge Routers")
+        self.device1 = Device.objects.create(
+            name="r1", hostname="r1.local", api_endpoint="https://r1.local/api", enabled=True,
+        )
+        self.device2 = Device.objects.create(
+            name="r2", hostname="r2.local", api_endpoint="https://r2.local/api", enabled=True,
+        )
+        self.disabled_device = Device.objects.create(
+            name="r3", hostname="r3.local", api_endpoint="https://r3.local/api", enabled=False,
+        )
+        self.group.devices.add(self.device1, self.device2, self.disabled_device)
+
+    @patch("audits.tasks.enqueue_audit")
+    def test_run_audit_enqueues_for_enabled_devices(self, mock_enqueue):
+        url = reverse("devicegroup-run-audit", kwargs={"pk": self.group.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(mock_enqueue.call_count, 2)
+        called_ids = {call.args[0] for call in mock_enqueue.call_args_list}
+        self.assertEqual(called_ids, {self.device1.id, self.device2.id})
+
+    @patch("audits.tasks.enqueue_audit")
+    def test_run_audit_returns_device_count(self, mock_enqueue):
+        url = reverse("devicegroup-run-audit", kwargs={"pk": self.group.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.data["audits_started"], 2)
+
+    @patch("audits.tasks.enqueue_audit")
+    def test_run_audit_empty_group(self, mock_enqueue):
+        empty_group = DeviceGroup.objects.create(name="Empty")
+        url = reverse("devicegroup-run-audit", kwargs={"pk": empty_group.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["audits_started"], 0)
+        mock_enqueue.assert_not_called()
+
+    def test_run_audit_not_found(self):
+        url = reverse("devicegroup-run-audit", kwargs={"pk": 99999})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

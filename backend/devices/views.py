@@ -3,8 +3,33 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Device
-from .serializers import DeviceSerializer
+from accounts.permissions import IsEditorOrAbove, IsViewerOrAbove
+from audits import tasks as audit_tasks
+
+from .models import Device, DeviceGroup
+from .serializers import DeviceGroupSerializer, DeviceSerializer
+
+
+class DeviceGroupViewSet(viewsets.ModelViewSet):
+    queryset = DeviceGroup.objects.prefetch_related("devices").all()
+    serializer_class = DeviceGroupSerializer
+    search_fields = ["name", "description"]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsViewerOrAbove()]
+        return [IsEditorOrAbove()]
+
+    @action(detail=True, methods=["post"])
+    def run_audit(self, request, pk=None):
+        group = self.get_object()
+        devices = group.devices.filter(enabled=True)
+        for device in devices:
+            audit_tasks.enqueue_audit(device.id, trigger="manual")
+        return Response({
+            "audits_started": devices.count(),
+            "group": group.name,
+        })
 
 
 class DeviceViewSet(viewsets.ModelViewSet):
@@ -14,16 +39,23 @@ class DeviceViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "hostname"]
     ordering_fields = ["name", "created_at"]
 
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsViewerOrAbove()]
+        return [IsEditorOrAbove()]
+
     @action(detail=True, methods=["post"])
     def test_connection(self, request, pk=None):
         device = self.get_object()
+        endpoint = device.effective_api_endpoint
+        if not endpoint:
+            return Response(
+                {"success": False, "error": "No API endpoint configured and no default endpoint is set."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         headers = {h.key: h.value for h in device.headers.all()}
         try:
-            response = requests.get(
-                device.api_endpoint,
-                headers=headers,
-                timeout=10,
-            )
+            response = requests.get(endpoint, headers=headers, timeout=10)
             return Response(
                 {
                     "success": True,

@@ -1,10 +1,11 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import DeviceViewSet
+from .views import DeviceGroupViewSet, DeviceViewSet
 
 router = DefaultRouter()
 router.register("devices", DeviceViewSet)
+router.register("groups", DeviceGroupViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

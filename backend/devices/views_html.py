@@ -1,27 +1,103 @@
 import requests as http_requests
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.views import generic
 from django.views.decorators.http import require_POST
 
+from accounts.decorators import RoleRequiredMixin, role_required
 from audits.tasks import enqueue_audit
 
-from .forms import DeviceForm, DeviceHeaderFormSet
-from .models import Device
+from .forms import DeviceForm, DeviceGroupForm, DeviceHeaderFormSet
+from .models import Device, DeviceGroup
 
 
-class DeviceListView(generic.ListView):
+class DeviceGroupListView(generic.ListView):
+    model = DeviceGroup
+    template_name = "devices/group_list.html"
+    context_object_name = "groups"
+
+    def get_queryset(self):
+        return DeviceGroup.objects.prefetch_related("devices").all()
+
+
+class DeviceGroupCreateView(generic.CreateView):
+    model = DeviceGroup
+    form_class = DeviceGroupForm
+    template_name = "devices/group_form.html"
+
+    def form_valid(self, form):
+        group = form.save()
+        messages.success(self.request, f'Group "{group.name}" created.')
+        return redirect("group-list-html")
+
+
+class DeviceGroupUpdateView(generic.UpdateView):
+    model = DeviceGroup
+    form_class = DeviceGroupForm
+    template_name = "devices/group_form.html"
+
+    def form_valid(self, form):
+        group = form.save()
+        messages.success(self.request, f'Group "{group.name}" updated.')
+        return redirect("group-list-html")
+
+
+class DeviceGroupDetailView(generic.DetailView):
+    model = DeviceGroup
+    template_name = "devices/group_detail.html"
+    context_object_name = "group"
+
+    def get_queryset(self):
+        return DeviceGroup.objects.prefetch_related("devices")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        group = self.object
+        ctx["devices"] = group.devices.all()
+        ctx["simple_rules"] = group.simple_rules.all()
+        ctx["custom_rules"] = group.custom_rules.all()
+        return ctx
+
+
+@require_POST
+def group_delete(request, pk):
+    group = get_object_or_404(DeviceGroup, pk=pk)
+    name = group.name
+    group.delete()
+    messages.success(request, f'Group "{name}" deleted.')
+    return redirect("group-list-html")
+
+
+@require_POST
+def group_run_audit(request, pk):
+    group = get_object_or_404(DeviceGroup, pk=pk)
+    devices = group.devices.filter(enabled=True)
+    count = 0
+    for device in devices:
+        enqueue_audit(device.id, trigger="manual")
+        count += 1
+    html = render_to_string(
+        "devices/partials/audit_started.html",
+        {"device": None, "group": group, "count": count},
+    )
+    return HttpResponse(html)
+
+
+class DeviceListView(LoginRequiredMixin, generic.ListView):
     model = Device
     template_name = "devices/device_list.html"
     context_object_name = "devices"
 
     def get_queryset(self):
-        return Device.objects.prefetch_related("headers").all()
+        return Device.objects.prefetch_related("headers", "groups").all()
 
 
-class DeviceCreateView(generic.CreateView):
+class DeviceCreateView(RoleRequiredMixin, generic.CreateView):
+    min_role = "editor"
+
     model = Device
     form_class = DeviceForm
     template_name = "devices/device_form.html"
@@ -48,7 +124,9 @@ class DeviceCreateView(generic.CreateView):
         return self.form_invalid(form)
 
 
-class DeviceUpdateView(generic.UpdateView):
+class DeviceUpdateView(RoleRequiredMixin, generic.UpdateView):
+    min_role = "editor"
+
     model = Device
     form_class = DeviceForm
     template_name = "devices/device_form.html"
@@ -77,13 +155,13 @@ class DeviceUpdateView(generic.UpdateView):
         return self.form_invalid(form)
 
 
-class DeviceDetailView(generic.DetailView):
+class DeviceDetailView(LoginRequiredMixin, generic.DetailView):
     model = Device
     template_name = "devices/device_detail.html"
     context_object_name = "device"
 
     def get_queryset(self):
-        return Device.objects.prefetch_related("headers")
+        return Device.objects.prefetch_related("headers", "groups")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -94,6 +172,7 @@ class DeviceDetailView(generic.DetailView):
         return ctx
 
 
+@role_required("editor")
 @require_POST
 def device_delete(request, pk):
     device = get_object_or_404(Device, pk=pk)
@@ -103,14 +182,23 @@ def device_delete(request, pk):
     return redirect("device-list-html")
 
 
+@role_required("editor")
 @require_POST
 def device_test_connection(request, pk):
     device = get_object_or_404(Device, pk=pk)
+    endpoint = device.effective_api_endpoint
+    if not endpoint:
+        html = render_to_string(
+            "devices/partials/test_result.html",
+            {
+                "success": False,
+                "error": "No API endpoint configured and no default endpoint is set.",
+            },
+        )
+        return HttpResponse(html)
     headers = {h.key: h.value for h in device.headers.all()}
     try:
-        response = http_requests.get(
-            device.api_endpoint, headers=headers, timeout=10
-        )
+        response = http_requests.get(endpoint, headers=headers, timeout=10)
         html = render_to_string(
             "devices/partials/test_result.html",
             {
@@ -130,6 +218,7 @@ def device_test_connection(request, pk):
     return HttpResponse(html)
 
 
+@role_required("editor")
 @require_POST
 def device_run_audit(request, pk):
     device = get_object_or_404(Device, pk=pk)
@@ -143,6 +232,7 @@ def device_run_audit(request, pk):
     return HttpResponse(html)
 
 
+@role_required("editor")
 def device_header_add(request):
     index = request.GET.get("index", "0")
     html = render_to_string(

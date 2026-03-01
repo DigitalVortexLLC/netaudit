@@ -1,3 +1,8 @@
 <div class="result-box result-success">
-    Audit started. <a href="{% url 'auditrun-list-html' %}">View audits</a>
+    {% if group %}
+    {{ count }} audit{{ count|pluralize }} started for group "{{ group.name }}".
+    {% else %}
+    Audit started.
+    {% endif %}
+    <a href="{% url 'auditrun-list-html' %}">View audits</a>
 </div>

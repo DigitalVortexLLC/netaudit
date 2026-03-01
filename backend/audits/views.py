@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.permissions import IsEditorOrAbove, IsViewerOrAbove
 from audits.models import AuditRun, AuditSchedule
 from audits.serializers import (
     AuditRunCreateSerializer,
@@ -19,6 +20,11 @@ from audits.serializers import (
 class AuditRunViewSet(viewsets.ModelViewSet):
     queryset = AuditRun.objects.select_related("device")
     filterset_fields = ["device", "status", "trigger"]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve", "results", "config"):
+            return [IsViewerOrAbove()]
+        return [IsEditorOrAbove()]
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -65,6 +71,11 @@ class AuditScheduleViewSet(viewsets.ModelViewSet):
     serializer_class = AuditScheduleSerializer
     filterset_fields = ["device", "enabled"]
 
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsViewerOrAbove()]
+        return [IsEditorOrAbove()]
+
     def perform_create(self, serializer):
         instance = serializer.save()
         from audits.tasks import create_schedule
@@ -79,6 +90,8 @@ class AuditScheduleViewSet(viewsets.ModelViewSet):
 
 
 class DashboardSummaryView(APIView):
+    permission_classes = [IsViewerOrAbove]
+
     def get(self, request):
         from devices.models import Device
 

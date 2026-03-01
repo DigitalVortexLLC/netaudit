@@ -23,7 +23,15 @@
         <dd>{{ device.hostname }}</dd>
 
         <dt>API Endpoint</dt>
-        <dd>{{ device.api_endpoint }}</dd>
+        <dd>
+            {{ device.effective_api_endpoint }}
+            {% if not device.api_endpoint and device.effective_api_endpoint %}
+                <span class="badge badge-info">default</span>
+            {% endif %}
+            {% if not device.effective_api_endpoint %}
+                <span style="color: #ef5350;">Not configured</span>
+            {% endif %}
+        </dd>
 
         <dt>Enabled</dt>
         <dd>{{ device.enabled|enabled_badge }}</dd>
@@ -55,6 +63,17 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+{% endif %}
+
+{% if device.groups.all %}
+<div class="card">
+    <h3>Groups</h3>
+    <ul>
+        {% for group in device.groups.all %}
+        <li><a href="{% url 'group-detail-html' group.pk %}">{{ group.name }}</a></li>
+        {% endfor %}
+    </ul>
 </div>
 {% endif %}
 

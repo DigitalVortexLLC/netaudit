@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from audits.models import AuditRun, AuditSchedule, RuleResult
-from devices.models import Device
+from devices.models import Device, DeviceGroup
 from rules.models import CustomRule, SimpleRule
 
 
@@ -320,6 +320,17 @@ class AuditRunAPITests(AuditFixtureMixin, APITestCase):
     """Tests for the AuditRun REST endpoints."""
 
     def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@test.com",
+            password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+
         self.device = self.create_device()
 
     # ---- LIST ----
@@ -569,6 +580,17 @@ class AuditScheduleAPITests(AuditFixtureMixin, APITestCase):
     """Tests for the AuditSchedule REST endpoints."""
 
     def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@test.com",
+            password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+
         self.device = self.create_device()
 
     # ---- LIST ----
@@ -770,6 +792,17 @@ class DashboardSummaryAPITests(AuditFixtureMixin, APITestCase):
     """Tests for the dashboard summary endpoint."""
 
     def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@test.com",
+            password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+
         self.device = self.create_device()
         self.url = reverse("dashboard-summary")
 
@@ -887,3 +920,97 @@ class DashboardSummaryAPITests(AuditFixtureMixin, APITestCase):
         response = self.client.get(self.url)
         expected_keys = {"device_count", "recent_audit_count", "pass_rate"}
         self.assertEqual(set(response.data.keys()), expected_keys)
+
+
+# ===========================================================================
+# GROUP-SCOPED RULE GATHERING TESTS
+# ===========================================================================
+class GroupScopedRuleGatheringTests(AuditFixtureMixin, TestCase):
+    """Tests that audit service gathers rules from device groups."""
+
+    def setUp(self):
+        self.device = self.create_device()
+        self.group = DeviceGroup.objects.create(name="Edge Routers")
+        self.device.groups.add(self.group)
+
+    def test_gather_simple_rules_from_group(self):
+        """A simple rule scoped to a group should apply to devices in that group."""
+        group_rule = SimpleRule.objects.create(
+            name="Group NTP",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="ntp server",
+            group=self.group,
+            enabled=True,
+        )
+        from audits.services import _gather_simple_rules
+        rules = _gather_simple_rules(self.device)
+        rule_ids = [r["id"] for r in rules]
+        self.assertIn(group_rule.id, rule_ids)
+
+    def test_gather_simple_rules_excludes_other_groups(self):
+        """A simple rule scoped to a different group should NOT apply."""
+        other_group = DeviceGroup.objects.create(name="Other")
+        SimpleRule.objects.create(
+            name="Other Group Rule",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="ntp",
+            group=other_group,
+            enabled=True,
+        )
+        from audits.services import _gather_simple_rules
+        rules = _gather_simple_rules(self.device)
+        self.assertEqual(len(rules), 0)
+
+    def test_gather_simple_rules_union_device_group_global(self):
+        """Device gets rules from its own FK, all its groups, and global."""
+        device_rule = SimpleRule.objects.create(
+            name="Device Rule",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="hostname",
+            device=self.device,
+            enabled=True,
+        )
+        group_rule = SimpleRule.objects.create(
+            name="Group Rule",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="ntp",
+            group=self.group,
+            enabled=True,
+        )
+        global_rule = SimpleRule.objects.create(
+            name="Global Rule",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="logging",
+            enabled=True,
+        )
+        from audits.services import _gather_simple_rules
+        rules = _gather_simple_rules(self.device)
+        rule_ids = {r["id"] for r in rules}
+        self.assertEqual(rule_ids, {device_rule.id, group_rule.id, global_rule.id})
+
+    def test_gather_custom_rules_from_group(self):
+        """A custom rule scoped to a group should apply to devices in that group."""
+        group_rule = CustomRule.objects.create(
+            name="Group Custom",
+            filename="test_group.py",
+            content="def test_x(): pass",
+            group=self.group,
+            enabled=True,
+        )
+        from audits.services import _gather_custom_rules
+        rules = _gather_custom_rules(self.device)
+        rule_ids = [r["id"] for r in rules]
+        self.assertIn(group_rule.id, rule_ids)
+
+    def test_gather_rules_disabled_group_rule_excluded(self):
+        """Disabled group rules should not be gathered."""
+        SimpleRule.objects.create(
+            name="Disabled Group Rule",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="ntp",
+            group=self.group,
+            enabled=False,
+        )
+        from audits.services import _gather_simple_rules
+        rules = _gather_simple_rules(self.device)
+        self.assertEqual(len(rules), 0)

@@ -73,19 +73,8 @@ def run_audit(device_id, trigger="manual"):
         # ----------------------------------------------------------
         # 2. Gather applicable rules
         # ----------------------------------------------------------
-        simple_rules = list(
-            SimpleRule.objects.filter(
-                Q(device=device) | Q(device__isnull=True),
-                enabled=True,
-            ).values("id", "name", "rule_type", "pattern", "severity")
-        )
-
-        custom_rules = list(
-            CustomRule.objects.filter(
-                Q(device=device) | Q(device__isnull=True),
-                enabled=True,
-            ).values("id", "filename", "content", "name", "severity")
-        )
+        simple_rules = _gather_simple_rules(device)
+        custom_rules = _gather_custom_rules(device)
 
         # ----------------------------------------------------------
         # 3. Build scaffold and run pytest
@@ -179,28 +168,18 @@ def _fetch_config(device):
     """
     Retrieve the device configuration via HTTP GET.
 
-    Parameters
-    ----------
-    device : Device
-        The device whose ``api_endpoint`` will be queried.
-
-    Returns
-    -------
-    str
-        The raw configuration text.
-
-    Raises
-    ------
-    requests.RequestException
-        On any HTTP or connection error.
+    Uses device.effective_api_endpoint which falls back to the
+    site-wide default endpoint if the device has no custom endpoint.
     """
-    headers = {h.key: h.value for h in device.headers.all()}
+    endpoint = device.effective_api_endpoint
+    if not endpoint:
+        raise ValueError(
+            f"Device '{device.name}' has no API endpoint configured "
+            "and no default endpoint is set."
+        )
 
-    response = requests.get(
-        device.api_endpoint,
-        headers=headers,
-        timeout=30,
-    )
+    headers = {h.key: h.value for h in device.headers.all()}
+    response = requests.get(endpoint, headers=headers, timeout=30)
     response.raise_for_status()
     return response.text
 
@@ -263,6 +242,38 @@ def _parse_results(audit_run, report, device):
         RuleResult.objects.bulk_create(rule_results)
 
 
+def _gather_simple_rules(device):
+    """
+    Collect all enabled simple rules that apply to a device.
+
+    Includes rules scoped to the device directly, any of the device's
+    groups, or global rules (device and group both null).
+    """
+    device_groups = device.groups.all()
+    return list(
+        SimpleRule.objects.filter(
+            Q(device=device) | Q(group__in=device_groups) | Q(device__isnull=True, group__isnull=True),
+            enabled=True,
+        ).values("id", "name", "rule_type", "pattern", "severity")
+    )
+
+
+def _gather_custom_rules(device):
+    """
+    Collect all enabled custom rules that apply to a device.
+
+    Includes rules scoped to the device directly, any of the device's
+    groups, or global rules (device and group both null).
+    """
+    device_groups = device.groups.all()
+    return list(
+        CustomRule.objects.filter(
+            Q(device=device) | Q(group__in=device_groups) | Q(device__isnull=True, group__isnull=True),
+            enabled=True,
+        ).values("id", "filename", "content", "name", "severity")
+    )
+
+
 def _match_simple_rule_id(node_id):
     """
     Extract the SimpleRule primary key from a pytest node ID.
@@ -310,9 +321,10 @@ def _match_custom_rule(node_id, device):
         return None
 
     filename = match.group(1)
+    device_groups = device.groups.all()
     try:
         return CustomRule.objects.get(
-            Q(device=device) | Q(device__isnull=True),
+            Q(device=device) | Q(group__in=device_groups) | Q(device__isnull=True, group__isnull=True),
             filename=filename,
             enabled=True,
         )

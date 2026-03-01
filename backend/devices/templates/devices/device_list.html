@@ -17,6 +17,7 @@
             <th>Hostname</th>
             <th>Endpoint</th>
             <th>Enabled</th>
+            <th>Groups</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -25,8 +26,17 @@
         <tr>
             <td><a href="{% url 'device-detail-html' device.pk %}">{{ device.name }}</a></td>
             <td>{{ device.hostname }}</td>
-            <td>{{ device.api_endpoint }}</td>
+            <td>
+                {{ device.effective_api_endpoint }}
+                {% if not device.api_endpoint and device.effective_api_endpoint %}
+                    <span class="badge badge-info">default</span>
+                {% endif %}
+                {% if not device.effective_api_endpoint %}
+                    <span style="color: #ef5350;">No endpoint</span>
+                {% endif %}
+            </td>
             <td>{{ device.enabled|enabled_badge }}</td>
+            <td>{{ device.groups.all|join:", " }}</td>
             <td>
                 <div class="btn-group">
                     <a href="{% url 'device-update-html' device.pk %}" class="btn btn-secondary btn-sm">Edit</a>

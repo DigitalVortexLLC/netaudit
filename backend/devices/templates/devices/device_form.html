@@ -35,6 +35,7 @@
             {% if form.api_endpoint.errors %}
             <div class="form-errors">{{ form.api_endpoint.errors }}</div>
             {% endif %}
+            <span class="helptext">Leave blank to use the default endpoint.</span>
         </div>
 
         <div class="form-group">
@@ -43,6 +44,14 @@
             </label>
             {% if form.enabled.errors %}
             <div class="form-errors">{{ form.enabled.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label>Groups</label>
+            {{ form.groups }}
+            {% if form.groups.errors %}
+            <div class="form-errors">{{ form.groups.errors }}</div>
             {% endif %}
         </div>
     </div>

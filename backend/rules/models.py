@@ -36,6 +36,14 @@ class SimpleRule(models.Model):
         blank=True,
         help_text="If null, rule applies to all devices",
     )
+    group = models.ForeignKey(
+        "devices.DeviceGroup",
+        on_delete=models.CASCADE,
+        related_name="simple_rules",
+        null=True,
+        blank=True,
+        help_text="If set, rule applies to all devices in this group",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -74,6 +82,14 @@ class CustomRule(models.Model):
         related_name="custom_rules",
         null=True,
         blank=True,
+    )
+    group = models.ForeignKey(
+        "devices.DeviceGroup",
+        on_delete=models.CASCADE,
+        related_name="custom_rules",
+        null=True,
+        blank=True,
+        help_text="If set, rule applies to all devices in this group",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
