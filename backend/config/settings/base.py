@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "rules",
     "audits",
     "common",
+    "settings",
 ]
 
 MIDDLEWARE = [
