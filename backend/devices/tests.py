@@ -216,6 +216,17 @@ class DeviceAPITests(APITestCase):
     """Tests for the Device REST API endpoints."""
 
     def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@test.com",
+            password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+
         self.device = Device.objects.create(
             name="api-device",
             hostname="api.local",
