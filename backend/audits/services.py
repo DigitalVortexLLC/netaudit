@@ -168,28 +168,18 @@ def _fetch_config(device):
     """
     Retrieve the device configuration via HTTP GET.
 
-    Parameters
-    ----------
-    device : Device
-        The device whose ``api_endpoint`` will be queried.
-
-    Returns
-    -------
-    str
-        The raw configuration text.
-
-    Raises
-    ------
-    requests.RequestException
-        On any HTTP or connection error.
+    Uses device.effective_api_endpoint which falls back to the
+    site-wide default endpoint if the device has no custom endpoint.
     """
-    headers = {h.key: h.value for h in device.headers.all()}
+    endpoint = device.effective_api_endpoint
+    if not endpoint:
+        raise ValueError(
+            f"Device '{device.name}' has no API endpoint configured "
+            "and no default endpoint is set."
+        )
 
-    response = requests.get(
-        device.api_endpoint,
-        headers=headers,
-        timeout=30,
-    )
+    headers = {h.key: h.value for h in device.headers.all()}
+    response = requests.get(endpoint, headers=headers, timeout=30)
     response.raise_for_status()
     return response.text
 

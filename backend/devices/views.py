@@ -23,13 +23,15 @@ class DeviceViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def test_connection(self, request, pk=None):
         device = self.get_object()
+        endpoint = device.effective_api_endpoint
+        if not endpoint:
+            return Response(
+                {"success": False, "error": "No API endpoint configured and no default endpoint is set."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         headers = {h.key: h.value for h in device.headers.all()}
         try:
-            response = requests.get(
-                device.api_endpoint,
-                headers=headers,
-                timeout=10,
-            )
+            response = requests.get(endpoint, headers=headers, timeout=10)
             return Response(
                 {
                     "success": True,

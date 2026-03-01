@@ -106,11 +106,19 @@ def device_delete(request, pk):
 @require_POST
 def device_test_connection(request, pk):
     device = get_object_or_404(Device, pk=pk)
+    endpoint = device.effective_api_endpoint
+    if not endpoint:
+        html = render_to_string(
+            "devices/partials/test_result.html",
+            {
+                "success": False,
+                "error": "No API endpoint configured and no default endpoint is set.",
+            },
+        )
+        return HttpResponse(html)
     headers = {h.key: h.value for h in device.headers.all()}
     try:
-        response = http_requests.get(
-            device.api_endpoint, headers=headers, timeout=10
-        )
+        response = http_requests.get(endpoint, headers=headers, timeout=10)
         html = render_to_string(
             "devices/partials/test_result.html",
             {
