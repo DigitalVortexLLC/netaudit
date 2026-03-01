@@ -138,6 +138,7 @@ SITE_ID = 1
 ACCOUNT_LOGIN_METHODS = {"email", "username"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "optional"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_ADAPTER = "accounts.adapters.AccountAdapter"
 LOGIN_REDIRECT_URL = "/"
