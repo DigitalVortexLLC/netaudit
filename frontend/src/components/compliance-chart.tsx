@@ -87,9 +87,10 @@ export function ComplianceChart() {
       backgroundColor: "#1a1a2e",
       borderColor: "#3a3a5a",
       style: { color: "#e0e0e0" },
-      formatter(this: Highcharts.TooltipFormatterContextObject) {
-        const idx = this.point.index;
-        return `<b>${chartData.categories[idx]}</b><br/>Compliance: <b>${this.y}%</b><br/>Passed: ${chartData.passed[idx]} / ${chartData.total[idx]}`;
+      formatter() {
+        const idx = (this as unknown as { point: { index: number } }).point.index;
+        const y = (this as unknown as { y: number }).y;
+        return `<b>${chartData.categories[idx]}</b><br/>Compliance: <b>${y}%</b><br/>Passed: ${chartData.passed[idx]} / ${chartData.total[idx]}`;
       },
     },
     plotOptions: {
