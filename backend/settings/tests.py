@@ -1,4 +1,7 @@
 from django.test import TestCase
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
 
 from .models import SiteSettings
 
@@ -32,3 +35,47 @@ class SiteSettingsModelTests(TestCase):
     def test_str(self):
         settings = SiteSettings.load()
         self.assertEqual(str(settings), "Site Settings")
+
+
+class SiteSettingsAPITests(APITestCase):
+
+    def test_get_settings(self):
+        url = reverse("site-settings")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["default_api_endpoint"], "")
+
+    def test_put_settings(self):
+        url = reverse("site-settings")
+        response = self.client.put(
+            url, {"default_api_endpoint": "https://new.example.com/api"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["default_api_endpoint"], "https://new.example.com/api")
+
+    def test_patch_settings(self):
+        url = reverse("site-settings")
+        response = self.client.patch(
+            url, {"default_api_endpoint": "https://patched.example.com"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["default_api_endpoint"], "https://patched.example.com")
+
+    def test_put_invalid_url(self):
+        url = reverse("site-settings")
+        response = self.client.put(
+            url, {"default_api_endpoint": "not-a-url"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_put_blank_clears_default(self):
+        site = SiteSettings.load()
+        site.default_api_endpoint = "https://old.example.com"
+        site.save()
+
+        url = reverse("site-settings")
+        response = self.client.put(
+            url, {"default_api_endpoint": ""}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["default_api_endpoint"], "")
