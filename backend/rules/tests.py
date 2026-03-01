@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from devices.models import Device
+from devices.models import Device, DeviceGroup
 from rules.models import CustomRule, SimpleRule
 
 
@@ -455,3 +455,157 @@ class CustomRuleAPITests(APITestCase):
         response = self.client.post(self.list_url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["device"], device.pk)
+
+
+# ---------------------------------------------------------------------------
+# Group FK tests
+# ---------------------------------------------------------------------------
+
+
+class SimpleRuleGroupTests(TestCase):
+    """Tests for SimpleRule group FK."""
+
+    def test_group_fk_nullable(self):
+        rule = SimpleRule.objects.create(
+            name="Global Rule",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="ntp",
+        )
+        self.assertIsNone(rule.group)
+
+    def test_group_fk_assigned(self):
+        group = DeviceGroup.objects.create(name="Routers")
+        rule = SimpleRule.objects.create(
+            name="Router Rule",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="ntp",
+            group=group,
+        )
+        self.assertEqual(rule.group, group)
+
+    def test_group_cascade_delete(self):
+        group = DeviceGroup.objects.create(name="Temp")
+        SimpleRule.objects.create(
+            name="Temp Rule",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="x",
+            group=group,
+        )
+        group.delete()
+        self.assertEqual(SimpleRule.objects.count(), 0)
+
+    def test_related_name(self):
+        group = DeviceGroup.objects.create(name="Switches")
+        SimpleRule.objects.create(
+            name="Switch Rule",
+            rule_type=SimpleRule.RuleType.MUST_CONTAIN,
+            pattern="vlan",
+            group=group,
+        )
+        self.assertEqual(group.simple_rules.count(), 1)
+
+
+class CustomRuleGroupTests(TestCase):
+    """Tests for CustomRule group FK."""
+
+    def test_group_fk_nullable(self):
+        rule = CustomRule.objects.create(
+            name="Global Custom",
+            filename="test_global.py",
+            content="def test_x(): pass",
+        )
+        self.assertIsNone(rule.group)
+
+    def test_group_fk_assigned(self):
+        group = DeviceGroup.objects.create(name="Routers")
+        rule = CustomRule.objects.create(
+            name="Router Custom",
+            filename="test_router.py",
+            content="def test_x(): pass",
+            group=group,
+        )
+        self.assertEqual(rule.group, group)
+
+    def test_related_name(self):
+        group = DeviceGroup.objects.create(name="Switches")
+        CustomRule.objects.create(
+            name="Switch Custom",
+            filename="test_switch.py",
+            content="def test_x(): pass",
+            group=group,
+        )
+        self.assertEqual(group.custom_rules.count(), 1)
+
+
+class SimpleRuleGroupAPITests(APITestCase):
+    """Tests for SimpleRule API with group FK."""
+
+    def test_create_with_group(self):
+        group = DeviceGroup.objects.create(name="Routers")
+        url = reverse("simplerule-list")
+        payload = {
+            "name": "Group Rule",
+            "rule_type": "must_contain",
+            "pattern": "ntp",
+            "severity": "high",
+            "enabled": True,
+            "group": group.pk,
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["group"], group.pk)
+
+    def test_filter_by_group(self):
+        group = DeviceGroup.objects.create(name="Routers")
+        SimpleRule.objects.create(
+            name="Group Rule",
+            rule_type="must_contain",
+            pattern="ntp",
+            group=group,
+        )
+        SimpleRule.objects.create(
+            name="Global Rule",
+            rule_type="must_contain",
+            pattern="dns",
+        )
+        url = reverse("simplerule-list")
+        response = self.client.get(url, {"group": group.pk})
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["name"], "Group Rule")
+
+
+class CustomRuleGroupAPITests(APITestCase):
+    """Tests for CustomRule API with group FK."""
+
+    def test_create_with_group(self):
+        group = DeviceGroup.objects.create(name="Switches")
+        url = reverse("customrule-list")
+        payload = {
+            "name": "Group Custom",
+            "filename": "test_group.py",
+            "content": "def test_x(): pass",
+            "severity": "medium",
+            "enabled": True,
+            "group": group.pk,
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["group"], group.pk)
+
+    def test_filter_by_group(self):
+        group = DeviceGroup.objects.create(name="Switches")
+        CustomRule.objects.create(
+            name="Group Custom",
+            filename="test_sw.py",
+            content="def test_x(): pass",
+            group=group,
+        )
+        CustomRule.objects.create(
+            name="Global Custom",
+            filename="test_gl.py",
+            content="def test_x(): pass",
+        )
+        url = reverse("customrule-list")
+        response = self.client.get(url, {"group": group.pk})
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["name"], "Group Custom")

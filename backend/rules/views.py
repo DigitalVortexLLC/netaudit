@@ -11,14 +11,14 @@ from .serializers import CustomRuleSerializer, SimpleRuleSerializer
 class SimpleRuleViewSet(viewsets.ModelViewSet):
     queryset = SimpleRule.objects.all()
     serializer_class = SimpleRuleSerializer
-    filterset_fields = ["device", "enabled", "severity", "rule_type"]
+    filterset_fields = ["device", "group", "enabled", "severity", "rule_type"]
     search_fields = ["name", "description", "pattern"]
 
 
 class CustomRuleViewSet(viewsets.ModelViewSet):
     queryset = CustomRule.objects.all()
     serializer_class = CustomRuleSerializer
-    filterset_fields = ["device", "enabled", "severity"]
+    filterset_fields = ["device", "group", "enabled", "severity"]
     search_fields = ["name", "description", "filename"]
 
     @action(detail=True, methods=["post"])

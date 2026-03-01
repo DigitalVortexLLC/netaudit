@@ -14,6 +14,7 @@ class SimpleRuleForm(forms.ModelForm):
             "severity",
             "enabled",
             "device",
+            "group",
         ]
 
 
@@ -28,6 +29,7 @@ class CustomRuleForm(forms.ModelForm):
             "severity",
             "enabled",
             "device",
+            "group",
         ]
         widgets = {
             "content": forms.Textarea(attrs={"class": "code-textarea"}),
