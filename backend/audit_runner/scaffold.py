@@ -81,6 +81,41 @@ def create_scaffold(audit_run, config_text, simple_rules, custom_rules):
     return scaffold_path
 
 
+def create_test_scaffold(config_text, rule_content, rule_filename="test_rule.py"):
+    """
+    Build a minimal temporary pytest project for testing a single custom rule.
+
+    Parameters
+    ----------
+    config_text : str
+        Raw device configuration text to test against.
+    rule_content : str
+        Python source code for the custom rule test file.
+    rule_filename : str
+        Filename for the rule test file (default ``test_rule.py``).
+
+    Returns
+    -------
+    pathlib.Path
+        Path to the created temporary directory.
+    """
+    scaffold_path = Path(tempfile.mkdtemp(prefix="netaudit_test_"))
+    (scaffold_path / "_config.txt").write_text(config_text)
+
+    root_conftest = (
+        "import pytest\n"
+        "from pathlib import Path\n\n"
+        "CONFIG_FILE = Path(__file__).parent / '_config.txt'\n\n\n"
+        "@pytest.fixture(scope='session')\n"
+        "def device_config():\n"
+        "    return CONFIG_FILE.read_text()\n"
+    )
+    (scaffold_path / "conftest.py").write_text(root_conftest)
+    (scaffold_path / rule_filename).write_text(rule_content)
+
+    return scaffold_path
+
+
 def cleanup_scaffold(scaffold_path):
     """
     Remove a scaffold directory created by :func:`create_scaffold`.
