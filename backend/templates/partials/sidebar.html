@@ -3,6 +3,7 @@
     <div class="sidebar-header">
         <h1>Netaudit</h1>
     </div>
+    {% if user.is_authenticated %}
     <ul class="sidebar-nav">
         <li><a href="{% url 'dashboard' %}" class="{% active_class request '/' exact=True %}">Dashboard</a></li>
         <li><a href="{% url 'device-list-html' %}" class="{% active_class request '/devices/' %}">Devices</a></li>
@@ -16,21 +17,18 @@
         <li><a href="{% url 'user-list' %}" class="{% active_class request '/accounts/users/' %}">Users</a></li>
         {% endif %}
     </ul>
-    {% if user.is_authenticated %}
     <div class="sidebar-footer">
-        <div class="sidebar-user">
+        <div class="sidebar-user-info">
             <span class="sidebar-username">{{ user.username }}</span>
             {{ user.role|badge }}
         </div>
-        <ul class="sidebar-nav">
-            <li><a href="{% url 'profile' %}">Profile</a></li>
-            <li>
-                <form method="post" action="{% url 'account_logout' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="sidebar-logout-btn">Logout</button>
-                </form>
-            </li>
-        </ul>
+        <div class="sidebar-user-actions">
+            <a href="{% url 'profile' %}" class="sidebar-action-link">Profile</a>
+            <form method="post" action="{% url 'account_logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="sidebar-action-link sidebar-logout-btn">Logout</button>
+            </form>
+        </div>
     </div>
     {% endif %}
 </nav>
