@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "audits",
     "common",
     "settings",
+    "config_sources",
 ]
 
 MIDDLEWARE = [
@@ -167,3 +168,10 @@ REST_AUTH = {
     "JWT_AUTH_HTTPONLY": False,
     "JWT_AUTH_RETURN_EXPIRATION": True,
 }
+
+# django-encrypted-model-fields
+import os as _os
+FIELD_ENCRYPTION_KEY = _os.environ.get(
+    "FIELD_ENCRYPTION_KEY",
+    SECRET_KEY[:32].ljust(32, "x"),
+)

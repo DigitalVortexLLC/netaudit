@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/v1/", include("rules.urls")),
     path("api/v1/", include("audits.urls")),
     path("api/v1/", include("settings.urls")),
+    path("api/v1/", include("config_sources.urls")),
     # HTML views
     path("", include("audits.urls_html")),
     path("devices/", include("devices.urls_html")),
