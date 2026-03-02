@@ -62,6 +62,26 @@ class AllowedCodeTests(SimpleTestCase):
         errors = validate_custom_rule_ast(code)
         self.assertEqual(errors, [])
 
+    def test_re_compile_allowed(self):
+        code = (
+            "import re\n\n"
+            "def test_x(device_config):\n"
+            "    pattern = re.compile(r'ntp server \\S+')\n"
+            "    assert pattern.search(device_config)\n"
+        )
+        errors = validate_custom_rule_ast(code)
+        self.assertEqual(errors, [])
+
+    def test_json_loads_allowed(self):
+        code = (
+            "import json\n\n"
+            "def test_x():\n"
+            "    data = json.loads('{\"key\": \"value\"}')\n"
+            "    assert data['key'] == 'value'\n"
+        )
+        errors = validate_custom_rule_ast(code)
+        self.assertEqual(errors, [])
+
 
 class BlockedImportTests(SimpleTestCase):
     """Import statements that MUST be rejected."""
@@ -109,6 +129,11 @@ class BlockedImportTests(SimpleTestCase):
     def test_import_io(self):
         errors = validate_custom_rule_ast("import io\n")
         self.assertTrue(len(errors) > 0)
+
+    def test_relative_import_blocked(self):
+        errors = validate_custom_rule_ast("from . import something\n")
+        self.assertTrue(len(errors) > 0)
+        self.assertIn("Relative import", errors[0]["message"])
 
 
 class BlockedCallTests(SimpleTestCase):

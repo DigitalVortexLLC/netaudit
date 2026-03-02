@@ -70,7 +70,15 @@ def _check_import(node: ast.AST, errors: list[dict]) -> None:
                     ),
                 })
     elif isinstance(node, ast.ImportFrom):
-        if node.module:
+        if node.module is None:
+            errors.append({
+                "line": node.lineno,
+                "message": (
+                    "Relative imports are not allowed. "
+                    f"Allowed imports: {', '.join(sorted(ALLOWED_IMPORTS))}"
+                ),
+            })
+        else:
             root_module = node.module.split(".")[0]
             if root_module not in ALLOWED_IMPORTS:
                 errors.append({
@@ -88,14 +96,13 @@ def _check_call(node: ast.AST, errors: list[dict]) -> None:
         return
 
     func = node.func
-    name = None
 
-    if isinstance(func, ast.Name):
-        name = func.id
-    elif isinstance(func, ast.Attribute):
-        name = func.attr
+    if not isinstance(func, ast.Name):
+        return
 
-    if name and name in BLOCKED_CALLS:
+    name = func.id
+
+    if name in BLOCKED_CALLS:
         errors.append({
             "line": node.lineno,
             "message": f"Call to '{name}()' is not allowed.",
