@@ -161,3 +161,27 @@ export function useValidateCustomRuleContent() {
     },
   });
 }
+
+interface TestRunResult {
+  passed: boolean;
+  output: string;
+  duration: number;
+  summary?: {
+    total?: number;
+    passed?: number;
+    failed?: number;
+  };
+  validation_errors?: Array<{ line: number; message: string }>;
+}
+
+export function useTestCustomRuleContent() {
+  return useMutation({
+    mutationFn: async (data: { content: string; device_id: number }) => {
+      const response = await api.post<TestRunResult>(
+        "/rules/custom/test-run/",
+        data
+      );
+      return response.data;
+    },
+  });
+}
