@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   useCustomRule,
   useCreateCustomRule,
   useUpdateCustomRule,
   useValidateCustomRuleContent,
+  useTestCustomRuleContent,
 } from "@/hooks/use-rules";
 import { useDevices } from "@/hooks/use-devices";
 import { useGroups } from "@/hooks/use-groups";
@@ -38,6 +38,7 @@ export function CustomRuleFormPage() {
   const createRule = useCreateCustomRule();
   const updateRule = useUpdateCustomRule(Number(id));
   const validateContent = useValidateCustomRuleContent();
+  const testRun = useTestCustomRuleContent();
 
   const [formData, setFormData] = useState<CustomRuleFormData>({
     name: "",
@@ -56,6 +57,13 @@ export function CustomRuleFormPage() {
   const [validationErrors, setValidationErrors] = useState<
     Array<{ line: number; message: string }>
   >([]);
+
+  const [testDeviceId, setTestDeviceId] = useState<number | null>(null);
+  const [testResult, setTestResult] = useState<{
+    passed: boolean;
+    output: string;
+    duration: number;
+  } | null>(null);
 
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
@@ -130,6 +138,17 @@ export function CustomRuleFormPage() {
     });
   }
 
+  function handleTestRun() {
+    if (!testDeviceId) return;
+    setTestResult(null);
+    testRun.mutate(
+      { content: formData.content, device_id: testDeviceId },
+      {
+        onSuccess: (data) => setTestResult(data),
+      }
+    );
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const mutation = isEdit ? updateRule : createRule;
@@ -161,151 +180,10 @@ export function CustomRuleFormPage() {
         </h1>
       </div>
 
-      {/* Split Layout */}
+      {/* Row 1: Editor + Tester */}
       <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
-        {/* Left Panel — Form */}
-        <Card className="lg:w-[380px] lg:shrink-0 overflow-y-auto">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base">Rule Settings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  rows={2}
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="filename">Filename</Label>
-                <Input
-                  id="filename"
-                  value={formData.filename}
-                  onChange={(e) =>
-                    setFormData({ ...formData, filename: e.target.value })
-                  }
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Must start with test_ and end with .py
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="severity">Severity</Label>
-                <select
-                  id="severity"
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={formData.severity}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      severity: e.target.value as Severity,
-                    })
-                  }
-                >
-                  <option value="critical">Critical</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                  <option value="info">Info</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="enabled"
-                  checked={formData.enabled}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, enabled: checked === true })
-                  }
-                />
-                <Label htmlFor="enabled">Enabled</Label>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="device">Device</Label>
-                <select
-                  id="device"
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={formData.device ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      device: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                >
-                  <option value="">None</option>
-                  {devicesData?.results.map((device) => (
-                    <option key={device.id} value={device.id}>
-                      {device.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="group">Group</Label>
-                <select
-                  id="group"
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={formData.group ?? ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      group: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                >
-                  <option value="">None</option>
-                  {groupsData?.results.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button
-                  type="submit"
-                  disabled={createRule.isPending || updateRule.isPending}
-                >
-                  {createRule.isPending || updateRule.isPending
-                    ? "Saving..."
-                    : isEdit
-                      ? "Update Rule"
-                      : "Create Rule"}
-                </Button>
-                <Button variant="outline" type="button" asChild>
-                  <Link to="/rules/custom">Cancel</Link>
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Right Panel — Editor */}
-        <Card className="flex-1 flex flex-col min-h-[500px]">
+        {/* Left — Editor */}
+        <Card className="flex-1 flex flex-col min-h-[400px]">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base font-mono">
               {formData.filename || "test_rule.py"}
@@ -358,7 +236,209 @@ export function CustomRuleFormPage() {
             />
           </CardContent>
         </Card>
+
+        {/* Right — Test Rule */}
+        <Card className="lg:w-[420px] lg:shrink-0 flex flex-col min-h-[400px]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Test Rule</CardTitle>
+            <div className="flex items-center gap-2 pt-2">
+              <select
+                className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={testDeviceId ?? ""}
+                onChange={(e) =>
+                  setTestDeviceId(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">Select a device...</option>
+                {devicesData?.results.map((device) => (
+                  <option key={device.id} value={device.id}>
+                    {device.name}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleTestRun}
+                disabled={!testDeviceId || testRun.isPending}
+              >
+                <Play className="mr-1 h-3 w-3" />
+                {testRun.isPending ? "Running..." : "Test"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col min-h-0 gap-2">
+            {testResult && (
+              <div
+                className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md ${
+                  testResult.passed
+                    ? "bg-green-500/10 text-green-500"
+                    : "bg-red-500/10 text-red-500"
+                }`}
+              >
+                {testResult.passed ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                ) : (
+                  <XCircle className="h-4 w-4 shrink-0" />
+                )}
+                {testResult.passed ? "All tests passed" : "Tests failed"}
+                {testResult.duration > 0 && (
+                  <span className="text-muted-foreground ml-auto text-xs">
+                    {testResult.duration}s
+                  </span>
+                )}
+              </div>
+            )}
+            {testResult ? (
+              <div className="flex-1 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-sm whitespace-pre-wrap">
+                {testResult.output || "No output"}
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+                Select a device and click Test to run this rule
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Row 2: Form Fields */}
+      <Card className="mt-4">
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="filename">Filename</Label>
+                <Input
+                  id="filename"
+                  value={formData.filename}
+                  onChange={(e) =>
+                    setFormData({ ...formData, filename: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="severity">Severity</Label>
+                <select
+                  id="severity"
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={formData.severity}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      severity: e.target.value as Severity,
+                    })
+                  }
+                >
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                  <option value="info">Info</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="device">Device</Label>
+                <select
+                  id="device"
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={formData.device ?? ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      device: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">None</option>
+                  {devicesData?.results.map((device) => (
+                    <option key={device.id} value={device.id}>
+                      {device.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="group">Group</Label>
+                <select
+                  id="group"
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={formData.group ?? ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      group: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">None</option>
+                  {groupsData?.results.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-end gap-4 col-span-2">
+                <div className="flex items-center gap-2 pb-2">
+                  <Checkbox
+                    id="enabled"
+                    checked={formData.enabled}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, enabled: checked === true })
+                    }
+                  />
+                  <Label htmlFor="enabled">Enabled</Label>
+                </div>
+                <div className="flex gap-2 ml-auto">
+                  <Button
+                    type="submit"
+                    disabled={createRule.isPending || updateRule.isPending}
+                  >
+                    {createRule.isPending || updateRule.isPending
+                      ? "Saving..."
+                      : isEdit
+                        ? "Update Rule"
+                        : "Create Rule"}
+                  </Button>
+                  <Button variant="outline" type="button" asChild>
+                    <Link to="/rules/custom">Cancel</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
