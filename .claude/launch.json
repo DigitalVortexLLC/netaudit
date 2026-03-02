@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "django-dev",
+      "runtimeExecutable": "/Users/aaronroth/Documents/netaudit/backend/.venv/bin/python",
+      "runtimeArgs": ["backend/manage.py", "runserver"],
+      "port": 8000
+    },
+    {
+      "name": "q2-worker",
+      "runtimeExecutable": "/Users/aaronroth/Documents/netaudit/backend/.venv/bin/python",
+      "runtimeArgs": ["backend/manage.py", "qcluster"],
+      "port": 0
+    },
+    {
+      "name": "frontend-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
+      "port": 5173
+    }
+  ]
+}
