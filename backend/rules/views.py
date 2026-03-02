@@ -68,9 +68,14 @@ class CustomRuleViewSet(viewsets.ModelViewSet):
         content = request.data.get("content")
         device_id = request.data.get("device_id")
 
-        if not content or not device_id:
+        if not content:
             return Response(
-                {"error": "Both 'content' and 'device_id' are required."},
+                {"content": ["This field is required."]},
+                status=400,
+            )
+        if not device_id:
+            return Response(
+                {"device_id": ["This field is required."]},
                 status=400,
             )
 
@@ -79,9 +84,10 @@ class CustomRuleViewSet(viewsets.ModelViewSet):
         if errors:
             return Response({
                 "passed": False,
-                "output": "\n".join(errors),
+                "output": "\n".join(f"Line {e['line']}: {e['message']}" for e in errors),
                 "duration": 0.0,
                 "summary": {},
+                "validation_errors": errors,
             })
 
         # Fetch the device and its config
@@ -128,7 +134,12 @@ class CustomRuleViewSet(viewsets.ModelViewSet):
             if report_file.exists():
                 report = json.loads(report_file.read_text())
             else:
-                report = {"tests": [], "summary": {}}
+                return Response({
+                    "passed": False,
+                    "output": result.stderr or "pytest failed to produce a report",
+                    "duration": duration,
+                    "summary": {},
+                })
 
             tests = report.get("tests", [])
             summary = report.get("summary", {})
