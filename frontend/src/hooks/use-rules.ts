@@ -149,3 +149,15 @@ export function useValidateCustomRule(id: number) {
     },
   });
 }
+
+export function useValidateCustomRuleContent() {
+  return useMutation({
+    mutationFn: async (content: string) => {
+      const response = await api.post<{
+        valid: boolean;
+        errors: Array<{ line: number; message: string }>;
+      }>("/rules/custom/validate-content/", { content });
+      return response.data;
+    },
+  });
+}
