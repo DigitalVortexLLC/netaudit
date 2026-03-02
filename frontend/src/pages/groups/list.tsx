@@ -3,6 +3,7 @@ import { Plus, Pencil } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { DeviceGroup } from "@/types";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table/data-table";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { useGroups, useDeleteGroup } from "@/hooks/use-groups";
@@ -70,16 +71,20 @@ export function GroupListPage() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <p className="text-muted-foreground">Loading...</p>
-      ) : (
-        <DataTable
-          columns={columns}
-          data={data?.results ?? []}
-          pageCount={data ? Math.ceil(data.count / 25) : 1}
-          totalCount={data?.count}
-        />
-      )}
+      <Card>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-muted-foreground">Loading...</p>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={data?.results ?? []}
+              pageCount={data ? Math.ceil(data.count / 25) : 1}
+              totalCount={data?.count}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

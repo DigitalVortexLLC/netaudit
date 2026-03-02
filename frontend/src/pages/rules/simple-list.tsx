@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { SimpleRule } from "@/types";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table/data-table";
 import { SeverityBadge, EnabledBadge } from "@/components/badges";
 import { DeleteDialog } from "@/components/delete-dialog";
@@ -77,7 +78,11 @@ export function SimpleRuleListPage() {
         </Button>
       </div>
 
-      <DataTable columns={columns} data={data?.results ?? []} />
+      <Card>
+        <CardContent>
+          <DataTable columns={columns} data={data?.results ?? []} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

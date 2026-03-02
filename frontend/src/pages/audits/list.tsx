@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AuditRun } from "@/types";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table/data-table";
 import { StatusBadge, TriggerBadge } from "@/components/badges";
 import { useAuditRuns } from "@/hooks/use-audits";
@@ -54,11 +55,15 @@ export function AuditListPage() {
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Audits</h1>
 
-      {isLoading ? (
-        <div className="text-center text-muted-foreground py-8">Loading...</div>
-      ) : (
-        <DataTable columns={columns} data={data?.results ?? []} />
-      )}
+      <Card>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center text-muted-foreground py-8">Loading...</div>
+          ) : (
+            <DataTable columns={columns} data={data?.results ?? []} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/data-table/data-table";
 import { EnabledBadge } from "@/components/badges";
 import { useUsers } from "@/hooks/use-users";
@@ -68,11 +69,15 @@ export function UserListPage() {
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Users</h1>
 
-      {isLoading ? (
-        <div className="text-center text-muted-foreground py-8">Loading...</div>
-      ) : (
-        <DataTable columns={columns} data={data?.results ?? []} />
-      )}
+      <Card>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center text-muted-foreground py-8">Loading...</div>
+          ) : (
+            <DataTable columns={columns} data={data?.results ?? []} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

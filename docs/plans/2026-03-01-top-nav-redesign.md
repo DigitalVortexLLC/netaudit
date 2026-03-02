@@ -1,3 +1,25 @@
+# Top Navigation Redesign Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** Replace the fixed left sidebar with a top navigation bar using pill/bubble buttons with hover dropdowns.
+
+**Architecture:** Rewrite app-layout.tsx to remove sidebar and use full-width content. Rewrite app-header.tsx to become the top nav bar with logo, nav pills (with hover dropdowns for grouped items), and right-side controls (search, settings gear, user avatar dropdown). Delete app-sidebar.tsx.
+
+**Tech Stack:** React, React Router, Tailwind CSS, Lucide icons, ShadCN DropdownMenu
+
+---
+
+### Task 1: Rewrite app-header.tsx as the Top Nav Bar
+
+**Files:**
+- Rewrite: `frontend/src/components/layout/app-header.tsx`
+
+**Step 1: Replace app-header.tsx with the new top nav bar**
+
+Replace the entire contents of `frontend/src/components/layout/app-header.tsx` with:
+
+```tsx
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -257,3 +279,107 @@ export function AppHeader() {
     </header>
   );
 }
+```
+
+**Step 2: Verify the file compiles**
+
+Run: `cd /Users/aaronroth/Documents/netaudit && npx tsc --noEmit --project frontend/tsconfig.app.json 2>&1 | head -20`
+Expected: No errors related to app-header.tsx
+
+---
+
+### Task 2: Update app-layout.tsx to Remove Sidebar
+
+**Files:**
+- Rewrite: `frontend/src/components/layout/app-layout.tsx`
+
+**Step 1: Replace app-layout.tsx**
+
+Replace the entire contents of `frontend/src/components/layout/app-layout.tsx` with:
+
+```tsx
+import { Outlet } from "react-router-dom";
+import { AppHeader } from "@/components/layout/app-header";
+import { CommandPalette } from "@/components/layout/command-palette";
+
+export function AppLayout() {
+  return (
+    <div className="min-h-screen bg-background">
+      <AppHeader />
+      <main>
+        <Outlet />
+      </main>
+      <CommandPalette />
+    </div>
+  );
+}
+```
+
+Note: Removed AppSidebar import, removed `pl-56` offset, removed `p-6` from main (pages already have their own `p-6`).
+
+**Step 2: Verify the file compiles**
+
+Run: `cd /Users/aaronroth/Documents/netaudit && npx tsc --noEmit --project frontend/tsconfig.app.json 2>&1 | head -20`
+Expected: No errors related to app-layout.tsx (may see warning about unused app-sidebar.tsx, that's fine)
+
+---
+
+### Task 3: Delete app-sidebar.tsx
+
+**Files:**
+- Delete: `frontend/src/components/layout/app-sidebar.tsx`
+
+**Step 1: Delete the sidebar file**
+
+Run: `rm /Users/aaronroth/Documents/netaudit/frontend/src/components/layout/app-sidebar.tsx`
+
+**Step 2: Verify no remaining imports**
+
+Run: `grep -r "app-sidebar" /Users/aaronroth/Documents/netaudit/frontend/src/`
+Expected: No results (the import was already removed in Task 2)
+
+**Step 3: Verify full build compiles**
+
+Run: `cd /Users/aaronroth/Documents/netaudit && npx tsc --noEmit --project frontend/tsconfig.app.json 2>&1 | head -20`
+Expected: No errors
+
+---
+
+### Task 4: Visual Verification
+
+**Step 1: Check the dev server is running and reload**
+
+Navigate to `http://localhost:5173/` and take a screenshot.
+Expected: Top nav bar with Netaudit logo, Dashboard/Netbox/Rules/Auditing pills, search/settings/avatar on right. Full-width content. No sidebar.
+
+**Step 2: Verify hover dropdowns work**
+
+Hover over the "Netbox" pill.
+Expected: Dropdown appears with Devices and Groups items with icons.
+
+**Step 3: Verify navigation works**
+
+Click Devices in the Netbox dropdown.
+Expected: Navigates to /devices page. The Netbox pill should be highlighted.
+
+**Step 4: Verify user dropdown works**
+
+Click the avatar.
+Expected: Dropdown with username, role badge, Profile link, Logout button.
+
+**Step 5: Verify command palette still works**
+
+Press Cmd+K.
+Expected: Command palette opens normally.
+
+---
+
+### Task 5: Commit
+
+**Step 1: Commit all changes**
+
+```bash
+git add frontend/src/components/layout/app-header.tsx frontend/src/components/layout/app-layout.tsx
+git rm frontend/src/components/layout/app-sidebar.tsx
+git commit -m "feat: replace sidebar with top nav bar using pill buttons and hover dropdowns"
+```
