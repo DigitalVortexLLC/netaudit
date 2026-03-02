@@ -12,13 +12,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { OutcomeBadge, SeverityBadge, StatusBadge, TriggerBadge } from "@/components/badges";
+import { TagBadge } from "@/components/tag-badge";
+import { TagSelector } from "@/components/tag-selector";
+import { CommentSection } from "@/components/comment-section";
 import { useAuditRun, useAuditConfig } from "@/hooks/use-audits";
+import { useTags, useAddAuditTag, useRemoveAuditTag } from "@/hooks/use-tags";
 import type { Severity } from "@/types";
 
 export function AuditDetailPage() {
   const { id } = useParams();
   const { data: audit, isLoading } = useAuditRun(Number(id));
   const { data: configData } = useAuditConfig(Number(id));
+  const { data: allTags = [] } = useTags();
+  const addTag = useAddAuditTag(Number(id));
+  const removeTag = useRemoveAuditTag(Number(id));
   const [showConfig, setShowConfig] = useState(false);
 
   if (isLoading) {
@@ -107,6 +114,30 @@ export function AuditDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Tags */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tags</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-2">
+            {audit.tags?.map((tag) => (
+              <TagBadge
+                key={tag.id}
+                name={tag.name}
+                onRemove={() => removeTag.mutate(tag.id)}
+              />
+            ))}
+            <TagSelector
+              allTags={allTags}
+              selectedTagIds={audit.tags?.map((t) => t.id) ?? []}
+              onAddTag={(data) => addTag.mutate(data)}
+              isPending={addTag.isPending}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Error Message */}
       {audit.status === "failed" && audit.error_message && (
         <Card className="border-red-800">
@@ -161,6 +192,9 @@ export function AuditDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Comments */}
+      <CommentSection auditId={Number(id)} />
 
       {/* Config Snapshot */}
       <Card>

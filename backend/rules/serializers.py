@@ -1,7 +1,6 @@
-import ast
-
 from rest_framework import serializers
 
+from .ast_validator import validate_custom_rule_ast
 from .models import CustomRule, SimpleRule
 
 
@@ -28,15 +27,6 @@ class CustomRuleSerializer(serializers.ModelSerializer):
         return value
 
     def validate_content(self, value):
-        try:
-            ast.parse(value)
-        except SyntaxError as exc:
-            raise serializers.ValidationError(
-                f"Invalid Python syntax: {exc}"
-            )
-
-        from .ast_validator import validate_custom_rule_ast
-
         errors = validate_custom_rule_ast(value)
         if errors:
             messages = [

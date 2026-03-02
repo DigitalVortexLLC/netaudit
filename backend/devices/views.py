@@ -68,3 +68,23 @@ class DeviceViewSet(viewsets.ModelViewSet):
                 {"success": False, "error": str(exc)},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+    @action(detail=True, methods=["get"])
+    def fetch_config(self, request, pk=None):
+        device = self.get_object()
+        endpoint = device.effective_api_endpoint
+        if not endpoint:
+            return Response(
+                {"error": "No API endpoint configured and no default endpoint is set."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        headers = {h.key: h.value for h in device.headers.all()}
+        try:
+            response = requests.get(endpoint, headers=headers, timeout=30)
+            response.raise_for_status()
+            return Response({"config": response.text})
+        except requests.RequestException as exc:
+            return Response(
+                {"error": str(exc)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )

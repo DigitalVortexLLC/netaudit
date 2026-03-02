@@ -7,23 +7,45 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import IsEditorOrAbove, IsViewerOrAbove
-from audits.models import AuditRun, AuditSchedule, RuleResult
+from audits.models import AuditComment, AuditRun, AuditSchedule, RuleResult, Tag
 from audits.serializers import (
+    AuditCommentSerializer,
     AuditRunCreateSerializer,
     AuditRunDetailSerializer,
     AuditRunListSerializer,
     AuditScheduleSerializer,
     RuleResultSerializer,
+    TagSerializer,
 )
 
 
+class TagViewSet(viewsets.ModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    pagination_class = None
+    http_method_names = ["get", "post", "delete", "head", "options"]
+
+    def get_permissions(self):
+        if self.action == "list":
+            return [IsViewerOrAbove()]
+        return [IsEditorOrAbove()]
+
+
 class AuditRunViewSet(viewsets.ModelViewSet):
-    queryset = AuditRun.objects.select_related("device")
-    filterset_fields = ["device", "status", "trigger"]
+    queryset = AuditRun.objects.select_related("device").prefetch_related(
+        "tags", "comments__author"
+    )
+    filterset_fields = ["device", "status", "trigger", "tags"]
 
     def get_permissions(self):
         if self.action in ("list", "retrieve", "results", "config"):
             return [IsViewerOrAbove()]
+        if self.action in ("manage_tags", "manage_comments"):
+            if self.request.method == "GET":
+                return [IsViewerOrAbove()]
+            return [IsEditorOrAbove()]
+        if self.action in ("remove_tag", "manage_comment"):
+            return [IsEditorOrAbove()]
         return [IsEditorOrAbove()]
 
     def get_serializer_class(self):
@@ -64,6 +86,81 @@ class AuditRunViewSet(viewsets.ModelViewSet):
     def config(self, request, pk=None):
         audit_run = self.get_object()
         return Response({"config": audit_run.config_snapshot})
+
+    @action(detail=True, methods=["get", "post"], url_path="tags")
+    def manage_tags(self, request, pk=None):
+        audit_run = self.get_object()
+        if request.method == "GET":
+            serializer = TagSerializer(audit_run.tags.all(), many=True)
+            return Response(serializer.data)
+        tag_id = request.data.get("tag_id")
+        tag_name = request.data.get("name")
+        if tag_id:
+            try:
+                tag = Tag.objects.get(pk=tag_id)
+            except Tag.DoesNotExist:
+                return Response(
+                    {"detail": "Tag not found."}, status=status.HTTP_404_NOT_FOUND
+                )
+        elif tag_name:
+            tag, _ = Tag.objects.get_or_create(name=tag_name.strip()[:50])
+        else:
+            return Response(
+                {"detail": "Provide tag_id or name."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        audit_run.tags.add(tag)
+        return Response(TagSerializer(tag).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["delete"], url_path="tags/(?P<tag_id>[^/.]+)")
+    def remove_tag(self, request, pk=None, tag_id=None):
+        audit_run = self.get_object()
+        try:
+            tag = Tag.objects.get(pk=tag_id)
+        except Tag.DoesNotExist:
+            return Response(
+                {"detail": "Tag not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        audit_run.tags.remove(tag)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["get", "post"], url_path="comments")
+    def manage_comments(self, request, pk=None):
+        audit_run = self.get_object()
+        if request.method == "GET":
+            comments = audit_run.comments.select_related("author").all()
+            serializer = AuditCommentSerializer(comments, many=True)
+            return Response(serializer.data)
+        serializer = AuditCommentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(audit_run=audit_run, author=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=["put", "delete"],
+        url_path="comments/(?P<comment_id>[^/.]+)",
+    )
+    def manage_comment(self, request, pk=None, comment_id=None):
+        audit_run = self.get_object()
+        try:
+            comment = audit_run.comments.get(pk=comment_id)
+        except AuditComment.DoesNotExist:
+            return Response(
+                {"detail": "Comment not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        if comment.author != request.user:
+            return Response(
+                {"detail": "You can only edit your own comments."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if request.method == "DELETE":
+            comment.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = AuditCommentSerializer(comment, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class AuditScheduleViewSet(viewsets.ModelViewSet):

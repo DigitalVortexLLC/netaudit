@@ -22,6 +22,22 @@ export interface RuleResult {
   rule_name: string | null;
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+  created_at: string;
+}
+
+export interface AuditComment {
+  id: number;
+  audit_run: number;
+  author: number | null;
+  author_name: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AuditRun {
   id: number;
   device: number;
@@ -32,12 +48,14 @@ export interface AuditRun {
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
+  tags: Tag[];
 }
 
 export interface AuditRunDetail extends AuditRun {
   results: RuleResult[];
   error_message: string;
   config_fetched_at: string | null;
+  comments: AuditComment[];
 }
 
 export interface DashboardSummary {

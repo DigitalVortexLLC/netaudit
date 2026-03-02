@@ -1,6 +1,17 @@
 from django.db import models
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class AuditRun(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -40,6 +51,7 @@ class AuditRun(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     error_message = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    tags = models.ManyToManyField("Tag", blank=True, related_name="audit_runs")
 
     class Meta:
         ordering = ["-created_at"]
@@ -100,3 +112,26 @@ class AuditSchedule(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.device})"
+
+
+class AuditComment(models.Model):
+    audit_run = models.ForeignKey(
+        AuditRun,
+        on_delete=models.CASCADE,
+        related_name="comments",
+    )
+    author = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="audit_comments",
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Comment by {self.author} on AuditRun {self.audit_run_id}"

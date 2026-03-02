@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from audits.models import AuditRun, AuditSchedule, RuleResult
+from audits.models import AuditComment, AuditRun, AuditSchedule, RuleResult, Tag
 from devices.models import Device, DeviceGroup
 from rules.models import CustomRule, SimpleRule
 
@@ -390,6 +390,7 @@ class AuditRunAPITests(AuditFixtureMixin, APITestCase):
             "started_at",
             "completed_at",
             "created_at",
+            "tags",
         }
         self.assertEqual(set(item.keys()), expected_fields)
 
@@ -455,6 +456,8 @@ class AuditRunAPITests(AuditFixtureMixin, APITestCase):
             "results",
             "error_message",
             "config_fetched_at",
+            "tags",
+            "comments",
         }
         self.assertEqual(set(response.data.keys()), expected_fields)
 
@@ -1059,3 +1062,319 @@ class GroupScopedRuleGatheringTests(AuditFixtureMixin, TestCase):
         from audits.services import _gather_simple_rules
         rules = _gather_simple_rules(self.device)
         self.assertEqual(len(rules), 0)
+
+
+# ===========================================================================
+# TAG & COMMENT MODEL TESTS
+# ===========================================================================
+class TagModelTests(AuditFixtureMixin, TestCase):
+    """Tests for the Tag model."""
+
+    def test_create_tag(self):
+        tag = Tag.objects.create(name="production")
+        tag.refresh_from_db()
+        self.assertEqual(tag.name, "production")
+        self.assertIsNotNone(tag.created_at)
+
+    def test_tag_name_unique(self):
+        Tag.objects.create(name="production")
+        with self.assertRaises(Exception):
+            Tag.objects.create(name="production")
+
+    def test_str(self):
+        tag = Tag.objects.create(name="maintenance")
+        self.assertEqual(str(tag), "maintenance")
+
+    def test_ordering_by_name(self):
+        Tag.objects.create(name="zebra")
+        Tag.objects.create(name="alpha")
+        tags = list(Tag.objects.all())
+        self.assertEqual(tags[0].name, "alpha")
+        self.assertEqual(tags[1].name, "zebra")
+
+
+class AuditRunTagTests(AuditFixtureMixin, TestCase):
+    """Tests for AuditRun <-> Tag M2M relationship."""
+
+    def test_add_tag_to_audit_run(self):
+        run = self.create_audit_run()
+        tag = Tag.objects.create(name="production")
+        run.tags.add(tag)
+        self.assertIn(tag, run.tags.all())
+
+    def test_multiple_tags_on_audit_run(self):
+        run = self.create_audit_run()
+        t1 = Tag.objects.create(name="production")
+        t2 = Tag.objects.create(name="maintenance")
+        run.tags.add(t1, t2)
+        self.assertEqual(run.tags.count(), 2)
+
+    def test_tag_reverse_relation(self):
+        run = self.create_audit_run()
+        tag = Tag.objects.create(name="production")
+        run.tags.add(tag)
+        self.assertIn(run, tag.audit_runs.all())
+
+    def test_remove_tag_from_audit_run(self):
+        run = self.create_audit_run()
+        tag = Tag.objects.create(name="production")
+        run.tags.add(tag)
+        run.tags.remove(tag)
+        self.assertEqual(run.tags.count(), 0)
+
+
+class AuditCommentModelTests(AuditFixtureMixin, TestCase):
+    """Tests for the AuditComment model."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser", email="test@test.com",
+            password="testpass123", role="editor",
+        )
+
+    def test_create_comment(self):
+        run = self.create_audit_run()
+        comment = AuditComment.objects.create(
+            audit_run=run, author=self.user, content="Looks good",
+        )
+        comment.refresh_from_db()
+        self.assertEqual(comment.content, "Looks good")
+        self.assertEqual(comment.author, self.user)
+        self.assertIsNotNone(comment.created_at)
+        self.assertIsNotNone(comment.updated_at)
+
+    def test_comment_ordering_by_created_at(self):
+        run = self.create_audit_run()
+        c1 = AuditComment.objects.create(audit_run=run, author=self.user, content="First")
+        c2 = AuditComment.objects.create(audit_run=run, author=self.user, content="Second")
+        comments = list(AuditComment.objects.all())
+        self.assertEqual(comments[0], c1)
+        self.assertEqual(comments[1], c2)
+
+    def test_cascade_delete_on_audit_run(self):
+        run = self.create_audit_run()
+        AuditComment.objects.create(audit_run=run, author=self.user, content="Test")
+        run.delete()
+        self.assertEqual(AuditComment.objects.count(), 0)
+
+    def test_set_null_on_author_delete(self):
+        run = self.create_audit_run()
+        comment = AuditComment.objects.create(
+            audit_run=run, author=self.user, content="Test",
+        )
+        self.user.delete()
+        comment.refresh_from_db()
+        self.assertIsNone(comment.author)
+
+    def test_str(self):
+        run = self.create_audit_run()
+        comment = AuditComment.objects.create(
+            audit_run=run, author=self.user, content="Test",
+        )
+        self.assertIn("testuser", str(comment))
+        self.assertIn(str(run.pk), str(comment))
+
+
+# ===========================================================================
+# TAG & COMMENT API TESTS
+# ===========================================================================
+class TagAPITests(AuditFixtureMixin, APITestCase):
+    """Tests for the Tag REST endpoints."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser", email="test@test.com",
+            password="testpass123", role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_list_tags_empty(self):
+        url = reverse("tag-list")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_create_tag(self):
+        url = reverse("tag-list")
+        response = self.client.post(url, {"name": "production"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Tag.objects.count(), 1)
+        self.assertEqual(Tag.objects.first().name, "production")
+
+    def test_create_duplicate_tag(self):
+        Tag.objects.create(name="production")
+        url = reverse("tag-list")
+        response = self.client.post(url, {"name": "production"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_delete_tag(self):
+        tag = Tag.objects.create(name="production")
+        url = reverse("tag-detail", kwargs={"pk": tag.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Tag.objects.count(), 0)
+
+
+class AuditRunTagAPITests(AuditFixtureMixin, APITestCase):
+    """Tests for adding/removing tags on audit runs."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser", email="test@test.com",
+            password="testpass123", role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+        self.device = self.create_device()
+        self.run = self.create_audit_run(device=self.device)
+
+    def test_add_tag_by_id(self):
+        tag = Tag.objects.create(name="production")
+        url = reverse("auditrun-manage-tags", kwargs={"pk": self.run.pk})
+        response = self.client.post(url, {"tag_id": tag.pk}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn(tag, self.run.tags.all())
+
+    def test_add_tag_by_name_creates_new(self):
+        url = reverse("auditrun-manage-tags", kwargs={"pk": self.run.pk})
+        response = self.client.post(url, {"name": "new-tag"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Tag.objects.filter(name="new-tag").exists())
+        self.assertEqual(self.run.tags.count(), 1)
+
+    def test_add_tag_by_name_reuses_existing(self):
+        Tag.objects.create(name="existing")
+        url = reverse("auditrun-manage-tags", kwargs={"pk": self.run.pk})
+        response = self.client.post(url, {"name": "existing"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Tag.objects.filter(name="existing").count(), 1)
+
+    def test_remove_tag(self):
+        tag = Tag.objects.create(name="production")
+        self.run.tags.add(tag)
+        url = reverse("auditrun-remove-tag", kwargs={"pk": self.run.pk, "tag_id": tag.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.run.tags.count(), 0)
+
+    def test_list_tags_on_audit(self):
+        tag = Tag.objects.create(name="production")
+        self.run.tags.add(tag)
+        url = reverse("auditrun-manage-tags", kwargs={"pk": self.run.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+    def test_audit_detail_includes_tags(self):
+        tag = Tag.objects.create(name="production")
+        self.run.tags.add(tag)
+        url = reverse("auditrun-detail", kwargs={"pk": self.run.pk})
+        response = self.client.get(url)
+        self.assertIn("tags", response.data)
+        self.assertEqual(len(response.data["tags"]), 1)
+        self.assertEqual(response.data["tags"][0]["name"], "production")
+
+    def test_audit_list_includes_tags(self):
+        tag = Tag.objects.create(name="production")
+        self.run.tags.add(tag)
+        url = reverse("auditrun-list")
+        response = self.client.get(url)
+        item = response.data["results"][0]
+        self.assertIn("tags", item)
+        self.assertEqual(len(item["tags"]), 1)
+
+    def test_filter_audits_by_tag(self):
+        tag = Tag.objects.create(name="production")
+        self.run.tags.add(tag)
+        self.create_audit_run(device=self.device)
+        url = reverse("auditrun-list")
+        response = self.client.get(url, {"tags": tag.pk})
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["id"], self.run.pk)
+
+
+class AuditCommentAPITests(AuditFixtureMixin, APITestCase):
+    """Tests for the AuditComment REST endpoints."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="testuser", email="test@test.com",
+            password="testpass123", role="admin",
+        )
+        self.other_user = User.objects.create_user(
+            username="other", email="other@test.com",
+            password="testpass123", role="editor",
+        )
+        self.client.force_authenticate(user=self.user)
+        self.device = self.create_device()
+        self.run = self.create_audit_run(device=self.device)
+
+    def test_list_comments_empty(self):
+        url = reverse("auditrun-manage-comments", kwargs={"pk": self.run.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+
+    def test_create_comment(self):
+        url = reverse("auditrun-manage-comments", kwargs={"pk": self.run.pk})
+        response = self.client.post(url, {"content": "This looks good"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(AuditComment.objects.count(), 1)
+        comment = AuditComment.objects.first()
+        self.assertEqual(comment.content, "This looks good")
+        self.assertEqual(comment.author, self.user)
+
+    def test_create_comment_includes_author_name(self):
+        url = reverse("auditrun-manage-comments", kwargs={"pk": self.run.pk})
+        response = self.client.post(url, {"content": "Test"}, format="json")
+        self.assertEqual(response.data["author_name"], "testuser")
+
+    def test_update_own_comment(self):
+        comment = AuditComment.objects.create(
+            audit_run=self.run, author=self.user, content="Original",
+        )
+        url = reverse("auditrun-manage-comment", kwargs={"pk": self.run.pk, "comment_id": comment.pk})
+        response = self.client.put(url, {"content": "Updated"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        comment.refresh_from_db()
+        self.assertEqual(comment.content, "Updated")
+
+    def test_cannot_update_other_users_comment(self):
+        comment = AuditComment.objects.create(
+            audit_run=self.run, author=self.other_user, content="Other's comment",
+        )
+        url = reverse("auditrun-manage-comment", kwargs={"pk": self.run.pk, "comment_id": comment.pk})
+        response = self.client.put(url, {"content": "Hacked"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_delete_own_comment(self):
+        comment = AuditComment.objects.create(
+            audit_run=self.run, author=self.user, content="To delete",
+        )
+        url = reverse("auditrun-manage-comment", kwargs={"pk": self.run.pk, "comment_id": comment.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(AuditComment.objects.count(), 0)
+
+    def test_cannot_delete_other_users_comment(self):
+        comment = AuditComment.objects.create(
+            audit_run=self.run, author=self.other_user, content="Other's",
+        )
+        url = reverse("auditrun-manage-comment", kwargs={"pk": self.run.pk, "comment_id": comment.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_audit_detail_includes_comments(self):
+        AuditComment.objects.create(
+            audit_run=self.run, author=self.user, content="A comment",
+        )
+        url = reverse("auditrun-detail", kwargs={"pk": self.run.pk})
+        response = self.client.get(url)
+        self.assertIn("comments", response.data)
+        self.assertEqual(len(response.data["comments"]), 1)

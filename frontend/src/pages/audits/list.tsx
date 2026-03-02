@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AuditRun } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable } from "@/components/data-table/data-table";
 import { StatusBadge, TriggerBadge } from "@/components/badges";
+import { TagBadge } from "@/components/tag-badge";
 import { useAuditRuns } from "@/hooks/use-audits";
+import { useTags } from "@/hooks/use-tags";
 
 const columns: ColumnDef<AuditRun>[] = [
   {
@@ -30,6 +34,17 @@ const columns: ColumnDef<AuditRun>[] = [
     cell: ({ row }) => <TriggerBadge trigger={row.original.trigger} />,
   },
   {
+    id: "tags",
+    header: "Tags",
+    cell: ({ row }) => (
+      <div className="flex flex-wrap gap-1">
+        {row.original.tags?.map((tag) => (
+          <TagBadge key={tag.id} name={tag.name} className="text-[10px] px-1.5 py-0" />
+        ))}
+      </div>
+    ),
+  },
+  {
     id: "summary",
     header: "Summary",
     cell: ({ row }) => {
@@ -49,11 +64,31 @@ const columns: ColumnDef<AuditRun>[] = [
 ];
 
 export function AuditListPage() {
-  const { data, isLoading } = useAuditRuns();
+  const [tagFilter, setTagFilter] = useState<string>("");
+  const { data: allTags = [] } = useTags();
+  const params: Record<string, string> = {};
+  if (tagFilter) params.tags = tagFilter;
+  const { data, isLoading } = useAuditRuns(params);
 
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Audits</h1>
+
+      <div className="flex gap-2">
+        <Select value={tagFilter || "all"} onValueChange={(v) => setTagFilter(v === "all" ? "" : v)}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Filter by tag" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All tags</SelectItem>
+            {allTags.map((tag) => (
+              <SelectItem key={tag.id} value={String(tag.id)}>
+                {tag.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <Card>
         <CardContent>

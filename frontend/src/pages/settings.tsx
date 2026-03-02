@@ -1,17 +1,31 @@
 import { useState, useEffect } from "react";
-import { Save } from "lucide-react";
+import { Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSiteSettings, useUpdateSiteSettings } from "@/hooks/use-settings";
+import { useTags, useCreateTag, useDeleteTag } from "@/hooks/use-tags";
+import { TagBadge } from "@/components/tag-badge";
 
 export function SettingsPage() {
   const { data: settings, isLoading } = useSiteSettings();
   const updateMutation = useUpdateSiteSettings();
 
+  const { data: tags = [] } = useTags();
+  const createTag = useCreateTag();
+  const deleteTag = useDeleteTag();
+
   const [defaultApiEndpoint, setDefaultApiEndpoint] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+
+  const handleAddTag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTagName.trim()) return;
+    await createTag.mutateAsync(newTagName.trim());
+    setNewTagName("");
+  };
 
   useEffect(() => {
     if (settings) {
@@ -68,6 +82,37 @@ export function SettingsPage() {
             <Button type="submit" disabled={updateMutation.isPending}>
               <Save className="h-4 w-4" />
               {updateMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Tags</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {tags.length === 0 && (
+              <p className="text-sm text-muted-foreground">No tags configured yet.</p>
+            )}
+            {tags.map((tag) => (
+              <TagBadge
+                key={tag.id}
+                name={tag.name}
+                onRemove={() => deleteTag.mutate(tag.id)}
+              />
+            ))}
+          </div>
+          <form onSubmit={handleAddTag} className="flex gap-2">
+            <Input
+              placeholder="New tag name"
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              className="max-w-xs"
+            />
+            <Button type="submit" size="sm" disabled={!newTagName.trim() || createTag.isPending}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add
             </Button>
           </form>
         </CardContent>

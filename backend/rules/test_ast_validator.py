@@ -226,6 +226,20 @@ class BlockedAttributeTests(SimpleTestCase):
         self.assertTrue(len(errors) > 0)
 
 
+class SyntaxErrorTests(SimpleTestCase):
+    """Syntax errors should be returned as structured error dicts."""
+
+    def test_syntax_error_returns_error(self):
+        errors = validate_custom_rule_ast("def test_x(\n    assert True\n")
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Syntax error", errors[0]["message"])
+        self.assertIsInstance(errors[0]["line"], int)
+
+    def test_empty_source_is_valid(self):
+        errors = validate_custom_rule_ast("")
+        self.assertEqual(errors, [])
+
+
 class MultipleErrorsTests(SimpleTestCase):
     """Validation should collect ALL errors, not stop at the first one."""
 

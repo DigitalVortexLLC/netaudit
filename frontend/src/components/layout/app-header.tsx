@@ -98,7 +98,7 @@ function NavPillDirect({ item }: { item: NavDirect }) {
       className={cn(
         "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors no-underline",
         active
-          ? "bg-primary text-primary-foreground"
+          ? "bg-[#2a2a5a] text-white hover:bg-[#33336a]"
           : "text-[#b0b0c8] hover:bg-[#2a2a4a] hover:text-white"
       )}
     >
@@ -134,7 +134,7 @@ function NavPillGroup({ item }: { item: NavGroup }) {
         className={cn(
           "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
           active || open
-            ? "bg-primary text-primary-foreground"
+            ? "bg-[#2a2a5a] text-white hover:bg-[#33336a]"
             : "text-[#b0b0c8] hover:bg-[#2a2a4a] hover:text-white"
         )}
       >

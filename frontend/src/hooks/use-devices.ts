@@ -77,3 +77,12 @@ export function useTestConnection(id: number) {
     },
   });
 }
+
+export function useFetchDeviceConfig() {
+  return useMutation({
+    mutationFn: async (deviceId: number) => {
+      const response = await api.get<{ config: string }>(`/devices/${deviceId}/fetch_config/`);
+      return response.data.config;
+    },
+  });
+}

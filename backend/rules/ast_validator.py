@@ -91,7 +91,14 @@ def _check_import(node: ast.AST, errors: list[dict]) -> None:
 
 
 def _check_call(node: ast.AST, errors: list[dict]) -> None:
-    """Reject calls to blocked builtin functions."""
+    """Reject calls to blocked builtin functions.
+
+    Only bare-name calls (e.g. ``eval(...)``) are checked — not method
+    calls (``obj.compile(...)``) — because BLOCKED_CALLS contains names
+    like ``compile`` which are legitimate methods on allowed modules
+    (``re.compile``).  Dunder-attribute access is already handled by
+    ``_check_attribute``.
+    """
     if not isinstance(node, ast.Call):
         return
 

@@ -1,6 +1,32 @@
 from rest_framework import serializers
 
-from audits.models import AuditRun, AuditSchedule, RuleResult
+from audits.models import AuditComment, AuditRun, AuditSchedule, RuleResult, Tag
+
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ["id", "name", "created_at"]
+        read_only_fields = ["created_at"]
+
+
+class AuditCommentSerializer(serializers.ModelSerializer):
+    author_name = serializers.CharField(
+        source="author.username", read_only=True, default="Deleted user"
+    )
+
+    class Meta:
+        model = AuditComment
+        fields = [
+            "id",
+            "audit_run",
+            "author",
+            "author_name",
+            "content",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["author", "audit_run", "created_at", "updated_at"]
 
 
 class RuleResultSerializer(serializers.ModelSerializer):
@@ -20,6 +46,7 @@ class RuleResultSerializer(serializers.ModelSerializer):
 
 class AuditRunListSerializer(serializers.ModelSerializer):
     device_name = serializers.CharField(source="device.name", read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
 
     class Meta:
         model = AuditRun
@@ -33,12 +60,15 @@ class AuditRunListSerializer(serializers.ModelSerializer):
             "started_at",
             "completed_at",
             "created_at",
+            "tags",
         ]
 
 
 class AuditRunDetailSerializer(serializers.ModelSerializer):
     device_name = serializers.CharField(source="device.name", read_only=True)
     results = RuleResultSerializer(many=True, read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
+    comments = AuditCommentSerializer(many=True, read_only=True)
 
     class Meta:
         model = AuditRun
@@ -55,6 +85,8 @@ class AuditRunDetailSerializer(serializers.ModelSerializer):
             "results",
             "error_message",
             "config_fetched_at",
+            "tags",
+            "comments",
         ]
 
 
