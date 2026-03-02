@@ -63,6 +63,8 @@ export function CustomRuleFormPage() {
     passed: boolean;
     output: string;
     duration: number;
+    summary?: { total?: number; passed?: number; failed?: number };
+    validation_errors?: Array<{ line: number; message: string }>;
   } | null>(null);
 
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null);
@@ -145,6 +147,13 @@ export function CustomRuleFormPage() {
       { content: formData.content, device_id: testDeviceId },
       {
         onSuccess: (data) => setTestResult(data),
+        onError: () => {
+          setTestResult({
+            passed: false,
+            output: "Test request failed. Please check your connection and try again.",
+            duration: 0,
+          });
+        },
       }
     );
   }
