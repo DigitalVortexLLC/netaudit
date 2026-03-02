@@ -458,7 +458,7 @@ class CustomRuleAPITests(APITestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data["valid"])
-        self.assertIn("error", response.data)
+        self.assertIn("errors", response.data)
 
     def test_validate_action_not_found(self):
         url = reverse("customrule-validate", args=[99999])
@@ -649,3 +649,119 @@ class CustomRuleGroupAPITests(APITestCase):
         response = self.client.get(url, {"group": group.pk})
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["name"], "Group Custom")
+
+
+class CustomRuleASTValidationAPITests(APITestCase):
+    """Tests that the API rejects dangerous code via AST validation."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="astuser", email="ast@test.com", password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+        self.list_url = reverse("customrule-list")
+        self.base_payload = {
+            "name": "Test Rule",
+            "description": "",
+            "filename": "test_rule.py",
+            "severity": "medium",
+            "enabled": True,
+        }
+
+    def test_create_rejects_import_os(self):
+        payload = {**self.base_payload, "content": "import os\n\ndef test_x():\n    os.system('ls')\n"}
+        response = self.client.post(self.list_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("content", response.data)
+
+    def test_create_rejects_eval(self):
+        payload = {**self.base_payload, "content": "def test_x():\n    eval('1')\n"}
+        response = self.client.post(self.list_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("content", response.data)
+
+    def test_create_rejects_open(self):
+        payload = {**self.base_payload, "content": "def test_x():\n    open('/etc/passwd')\n"}
+        response = self.client.post(self.list_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_allows_safe_code(self):
+        payload = {**self.base_payload, "content": "import re\n\ndef test_x(device_config):\n    assert re.search(r'ntp', device_config)\n"}
+        response = self.client.post(self.list_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_update_rejects_dangerous_code(self):
+        payload = {**self.base_payload, "content": "def test_x(): pass\n"}
+        response = self.client.post(self.list_url, payload, format="json")
+        rule_id = response.data["id"]
+        url = reverse("customrule-detail", args=[rule_id])
+        bad_payload = {**self.base_payload, "content": "import subprocess\n\ndef test_x():\n    subprocess.run(['ls'])\n"}
+        response = self.client.put(url, bad_payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_validate_endpoint_returns_ast_errors(self):
+        from rules.models import CustomRule
+        payload = {**self.base_payload, "content": "import os\n\ndef test_x():\n    os.system('ls')\n"}
+        rule = CustomRule.objects.create(**payload)
+        url = reverse("customrule-validate", args=[rule.pk])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["valid"])
+        self.assertIn("errors", response.data)
+        self.assertTrue(len(response.data["errors"]) > 0)
+        self.assertIn("line", response.data["errors"][0])
+        self.assertIn("message", response.data["errors"][0])
+
+    def test_validate_endpoint_valid_code(self):
+        from rules.models import CustomRule
+        payload = {**self.base_payload, "content": "def test_x(device_config):\n    assert 'ntp' in device_config\n"}
+        rule = CustomRule.objects.create(**payload)
+        url = reverse("customrule-validate", args=[rule.pk])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["valid"])
+
+    def test_error_message_includes_line_number(self):
+        payload = {**self.base_payload, "content": "import os\n"}
+        response = self.client.post(self.list_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        error_text = str(response.data["content"])
+        self.assertIn("Line 1", error_text)
+
+
+class CustomRuleValidateContentAPITests(APITestCase):
+    """Tests for POST /api/v1/rules/custom/validate-content/ (no saved rule needed)."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="valuser", email="val@test.com", password="testpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.user)
+        self.url = reverse("customrule-validate-content")
+
+    def test_valid_code(self):
+        response = self.client.post(self.url, {"content": "def test_x(device_config):\n    assert 'ntp' in device_config\n"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["valid"])
+        self.assertEqual(response.data["errors"], [])
+
+    def test_syntax_error(self):
+        response = self.client.post(self.url, {"content": "def test_x(\n    assert True\n"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["valid"])
+        self.assertTrue(len(response.data["errors"]) > 0)
+
+    def test_blocked_import(self):
+        response = self.client.post(self.url, {"content": "import os\n"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["valid"])
+
+    def test_missing_content_field(self):
+        response = self.client.post(self.url, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

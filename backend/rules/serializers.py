@@ -34,4 +34,14 @@ class CustomRuleSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 f"Invalid Python syntax: {exc}"
             )
+
+        from .ast_validator import validate_custom_rule_ast
+
+        errors = validate_custom_rule_ast(value)
+        if errors:
+            messages = [
+                f"Line {e['line']}: {e['message']}" for e in errors
+            ]
+            raise serializers.ValidationError(messages)
+
         return value
