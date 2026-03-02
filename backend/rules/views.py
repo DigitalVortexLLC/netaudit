@@ -33,24 +33,28 @@ class CustomRuleViewSet(viewsets.ModelViewSet):
             return [IsViewerOrAbove()]
         return [IsEditorOrAbove()]
 
-    @action(detail=True, methods=["post"])
-    def validate(self, request, pk=None):
-        rule = self.get_object()
+    def _validate_python(self, content):
+        """Run syntax + AST security checks, return a Response."""
         try:
-            ast.parse(rule.content)
+            ast.parse(content)
         except SyntaxError as exc:
             return Response({
                 "valid": False,
                 "errors": [{"line": exc.lineno or 1, "message": f"Syntax error: {exc.msg}"}],
             })
 
-        from rules.ast_validator import validate_custom_rule_ast
+        from .ast_validator import validate_custom_rule_ast
 
-        errors = validate_custom_rule_ast(rule.content)
+        errors = validate_custom_rule_ast(content)
         if errors:
             return Response({"valid": False, "errors": errors})
 
         return Response({"valid": True, "errors": []})
+
+    @action(detail=True, methods=["post"])
+    def validate(self, request, pk=None):
+        rule = self.get_object()
+        return self._validate_python(rule.content)
 
     @action(detail=False, methods=["post"], url_path="validate-content")
     def validate_content(self, request):
@@ -60,19 +64,4 @@ class CustomRuleViewSet(viewsets.ModelViewSet):
                 {"content": ["This field is required."]},
                 status=400,
             )
-
-        try:
-            ast.parse(content)
-        except SyntaxError as exc:
-            return Response({
-                "valid": False,
-                "errors": [{"line": exc.lineno or 1, "message": f"Syntax error: {exc.msg}"}],
-            })
-
-        from rules.ast_validator import validate_custom_rule_ast
-
-        errors = validate_custom_rule_ast(content)
-        if errors:
-            return Response({"valid": False, "errors": errors})
-
-        return Response({"valid": True, "errors": []})
+        return self._validate_python(content)
