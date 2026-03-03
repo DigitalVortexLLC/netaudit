@@ -20,6 +20,7 @@ from django.db.models import Q
 from audit_runner.scaffold import cleanup_scaffold, create_scaffold
 from audits.models import AuditRun, RuleResult
 from devices.models import Device
+from notifications.dispatch import dispatch_webhooks
 from rules.models import CustomRule, SimpleRule
 
 logger = logging.getLogger(__name__)
@@ -146,6 +147,11 @@ def run_audit(device_id, trigger="manual"):
                 "completed_at",
             ]
         )
+
+        # ----------------------------------------------------------
+        # 6. Dispatch webhook notifications
+        # ----------------------------------------------------------
+        dispatch_webhooks(audit_run)
 
     except Exception as exc:
         logger.exception("Audit run %s failed", audit_run.id)
