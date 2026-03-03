@@ -27,3 +27,16 @@ export function useUpdateSiteSettings() {
     onError: () => toast.error("Operation failed"),
   });
 }
+
+export function useTestSlackWebhook() {
+  return useMutation({
+    mutationFn: async (webhookUrl: string) => {
+      const response = await api.post("/settings/test-slack/", {
+        webhook_url: webhookUrl,
+      });
+      return response.data;
+    },
+    onSuccess: () => toast.success("Test message sent to Slack"),
+    onError: () => toast.error("Failed to send test message"),
+  });
+}
