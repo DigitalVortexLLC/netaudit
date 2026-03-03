@@ -6,5 +6,6 @@ export interface User {
   email: string;
   role: UserRole;
   is_api_enabled: boolean;
+  is_active: boolean;
   date_joined: string;
 }

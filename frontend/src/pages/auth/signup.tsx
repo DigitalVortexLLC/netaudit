@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { useRegistrationStatus } from "@/hooks/use-settings";
 
 export function SignupPage() {
   const { register, isAuthenticated } = useAuth();
+  const { data: regStatus, isLoading: regLoading } = useRegistrationStatus();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password1, setPassword1] = useState("");
@@ -12,6 +14,49 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) return <Navigate to="/" replace />;
+
+  if (regLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#1a1a2e" }}>
+        <p className="text-[#b0b0c8]">Loading...</p>
+      </div>
+    );
+  }
+
+  if (regStatus && !regStatus.public_registration_enabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "#1a1a2e" }}>
+        <div className="flex max-w-[900px] w-full min-h-[520px] rounded-2xl overflow-hidden shadow-2xl">
+          <div
+            className="hidden md:flex flex-col justify-center items-center p-10 relative overflow-hidden"
+            style={{
+              flex: "0 0 40%",
+              background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+            }}
+          >
+            <div className="relative text-center">
+              <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">Netaudit</h1>
+              <p className="text-[#b0b0c8] text-lg font-light leading-relaxed">
+                Network Configuration<br />Audit Platform
+              </p>
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col justify-center items-center p-10" style={{ background: "#2d2d2d" }}>
+            <h2 className="text-white text-2xl font-semibold mb-4">Registration Disabled</h2>
+            <p className="text-[#888] text-sm text-center mb-6">
+              Public registration is currently disabled. Please contact your administrator for access.
+            </p>
+            <Link
+              to="/login"
+              className="text-[#64b5f6] hover:underline text-sm"
+            >
+              Back to Sign in
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

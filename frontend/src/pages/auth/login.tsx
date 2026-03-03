@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { useRegistrationStatus } from "@/hooks/use-settings";
 
 export function LoginPage() {
   const { login, isAuthenticated } = useAuth();
+  const { data: regStatus } = useRegistrationStatus();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -136,14 +138,16 @@ export function LoginPage() {
               Sign in with Passkey
             </button>
 
-            <div className="mt-6 text-center text-sm text-[#888]">
-              <p>
-                Don&apos;t have an account?{" "}
-                <Link to="/signup" className="text-[#64b5f6] hover:underline">
-                  Create one
-                </Link>
-              </p>
-            </div>
+            {regStatus?.public_registration_enabled !== false && (
+              <div className="mt-6 text-center text-sm text-[#888]">
+                <p>
+                  Don&apos;t have an account?{" "}
+                  <Link to="/signup" className="text-[#64b5f6] hover:underline">
+                    Create one
+                  </Link>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
