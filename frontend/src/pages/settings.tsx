@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Plus, Save } from "lucide-react";
+import { Plus, Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useSiteSettings, useUpdateSiteSettings } from "@/hooks/use-settings";
+import { useSiteSettings, useUpdateSiteSettings, useTestSlackWebhook } from "@/hooks/use-settings";
 import { useTags, useCreateTag, useDeleteTag } from "@/hooks/use-tags";
 import { TagBadge } from "@/components/tag-badge";
 
@@ -17,8 +17,10 @@ export function SettingsPage() {
   const deleteTag = useDeleteTag();
 
   const [defaultApiEndpoint, setDefaultApiEndpoint] = useState("");
+  const [slackWebhookUrl, setSlackWebhookUrl] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [newTagName, setNewTagName] = useState("");
+  const testSlack = useTestSlackWebhook();
 
   const handleAddTag = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +32,7 @@ export function SettingsPage() {
   useEffect(() => {
     if (settings) {
       setDefaultApiEndpoint(settings.default_api_endpoint);
+      setSlackWebhookUrl(settings.slack_webhook_url);
     }
   }, [settings]);
 
@@ -38,6 +41,7 @@ export function SettingsPage() {
     setSuccessMessage("");
     await updateMutation.mutateAsync({
       default_api_endpoint: defaultApiEndpoint,
+      slack_webhook_url: slackWebhookUrl,
     });
     setSuccessMessage("Settings saved successfully.");
   };
@@ -115,6 +119,39 @@ export function SettingsPage() {
               Add
             </Button>
           </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Notifications</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="slack_webhook_url">Slack Webhook URL</Label>
+            <div className="flex gap-2">
+              <Input
+                id="slack_webhook_url"
+                type="url"
+                placeholder="https://hooks.slack.com/services/..."
+                value={slackWebhookUrl}
+                onChange={(e) => setSlackWebhookUrl(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!slackWebhookUrl.trim() || testSlack.isPending}
+                onClick={() => testSlack.mutate(slackWebhookUrl)}
+              >
+                <Send className="h-4 w-4 mr-1" />
+                Test
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Receive a notification when an audit has failed rules.
+              Paste an incoming webhook URL from your Slack workspace.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

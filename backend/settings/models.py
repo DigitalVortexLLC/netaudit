@@ -8,6 +8,11 @@ class SiteSettings(models.Model):
         help_text="Base URL for devices without a custom endpoint. "
         "Effective URL: <this>/<device_name>",
     )
+    slack_webhook_url = models.URLField(
+        blank=True,
+        default="",
+        help_text="Slack incoming webhook URL for audit failure notifications.",
+    )
 
     class Meta:
         verbose_name = "site settings"

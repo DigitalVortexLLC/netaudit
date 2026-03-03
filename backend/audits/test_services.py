@@ -501,6 +501,36 @@ class RunAuditSuccessTests(TransactionTestCase):
 
         cleanup_scaffold(scaffold_dir)
 
+    @patch("audits.services.send_slack_notification")
+    @patch("audits.services.cleanup_scaffold")
+    @patch("audits.services.create_scaffold")
+    @patch("audits.services.subprocess.run")
+    @patch("audits.services.requests.get")
+    def test_sends_slack_notification_on_failure(
+        self, mock_get, mock_subprocess, mock_create_scaffold, mock_cleanup, mock_slack
+    ):
+        """Slack notification fires when audit has failed rules."""
+        mock_response = Mock()
+        mock_response.text = self.config_text
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        scaffold_dir = Path(tempfile.mkdtemp(prefix="netaudit_test_"))
+        mock_create_scaffold.return_value = scaffold_dir
+
+        report_file = scaffold_dir / "report.json"
+        report_file.write_text(json.dumps(self.mock_report))
+
+        mock_subprocess.return_value = Mock(returncode=1, stdout="", stderr="")
+
+        run_audit(self.device.id)
+
+        mock_slack.assert_called_once()
+        audit_run = mock_slack.call_args[0][0]
+        self.assertEqual(audit_run.summary["failed"], 1)
+
+        cleanup_scaffold(scaffold_dir)
+
     @patch("audits.services.cleanup_scaffold")
     @patch("audits.services.create_scaffold")
     @patch("audits.services.subprocess.run")
