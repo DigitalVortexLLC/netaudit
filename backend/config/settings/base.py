@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "audits",
     "common",
     "settings",
+    "notifications",
     "config_sources",
 ]
 

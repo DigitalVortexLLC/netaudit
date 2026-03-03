@@ -21,6 +21,7 @@ from audit_runner.scaffold import cleanup_scaffold, create_scaffold
 from audits.models import AuditRun, RuleResult
 from audits.notifications import send_slack_notification
 from devices.models import Device
+from notifications.dispatch import dispatch_webhooks
 from rules.models import CustomRule, SimpleRule
 
 logger = logging.getLogger(__name__)
@@ -147,6 +148,11 @@ def run_audit(device_id, trigger="manual"):
                 "completed_at",
             ]
         )
+
+        # ----------------------------------------------------------
+        # 6. Dispatch webhook notifications
+        # ----------------------------------------------------------
+        dispatch_webhooks(audit_run)
 
         # Send Slack notification if any rules failed
         if audit_run.summary.get("failed", 0) > 0:

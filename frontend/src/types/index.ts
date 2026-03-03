@@ -5,4 +5,5 @@ export * from "./rule";
 export * from "./audit";
 export * from "./schedule";
 export * from "./settings";
+export * from "./webhook";
 export * from "./netmiko";
