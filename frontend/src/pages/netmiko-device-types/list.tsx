@@ -4,14 +4,14 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { NetmikoDeviceType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DataTable } from "@/components/data-table/data-table";
+import { DataTable, SortableHeader } from "@/components/data-table/data-table";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { useNetmikoDeviceTypes, useDeleteNetmikoDeviceType } from "@/hooks/use-netmiko-device-types";
 
 const columns: ColumnDef<NetmikoDeviceType>[] = [
   {
     accessorKey: "name",
-    header: "Name",
+    header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
     cell: ({ row }) => (
       <Link
         to={`/netmiko-device-types/${row.original.id}/edit`}
@@ -23,15 +23,16 @@ const columns: ColumnDef<NetmikoDeviceType>[] = [
   },
   {
     accessorKey: "driver",
-    header: "Driver",
+    header: ({ column }) => <SortableHeader column={column}>Driver</SortableHeader>,
   },
   {
     accessorKey: "default_command",
-    header: "Default Command",
+    header: ({ column }) => <SortableHeader column={column}>Default Command</SortableHeader>,
   },
   {
     id: "actions",
     header: "Actions",
+    enableGlobalFilter: false,
     cell: ({ row }) => <DeviceTypeActions deviceType={row.original} />,
   },
 ];
@@ -75,7 +76,7 @@ export function NetmikoDeviceTypeListPage() {
           {isLoading ? (
             <div className="text-center text-muted-foreground py-8">Loading...</div>
           ) : (
-            <DataTable columns={columns} data={data?.results ?? []} />
+            <DataTable columns={columns} data={data?.results ?? []} searchPlaceholder="Search device types..." />
           )}
         </CardContent>
       </Card>

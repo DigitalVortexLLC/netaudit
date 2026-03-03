@@ -5,7 +5,7 @@ import type { User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { DataTable } from "@/components/data-table/data-table";
+import { DataTable, SortableHeader } from "@/components/data-table/data-table";
 import { EnabledBadge } from "@/components/badges";
 import { useUsers } from "@/hooks/use-users";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,33 +13,34 @@ import { useAuth } from "@/hooks/use-auth";
 const columns: ColumnDef<User>[] = [
   {
     accessorKey: "username",
-    header: "Username",
+    header: ({ column }) => <SortableHeader column={column}>Username</SortableHeader>,
   },
   {
     accessorKey: "email",
-    header: "Email",
+    header: ({ column }) => <SortableHeader column={column}>Email</SortableHeader>,
   },
   {
     accessorKey: "role",
-    header: "Role",
+    header: ({ column }) => <SortableHeader column={column}>Role</SortableHeader>,
     cell: ({ row }) => (
       <Badge variant="secondary">{row.original.role}</Badge>
     ),
   },
   {
     accessorKey: "is_api_enabled",
-    header: "API Enabled",
+    header: ({ column }) => <SortableHeader column={column}>API Enabled</SortableHeader>,
     cell: ({ row }) => <EnabledBadge enabled={row.original.is_api_enabled} />,
   },
   {
     accessorKey: "date_joined",
-    header: "Joined",
+    header: ({ column }) => <SortableHeader column={column}>Joined</SortableHeader>,
     cell: ({ row }) =>
       new Date(row.original.date_joined).toLocaleDateString(),
   },
   {
     id: "actions",
     header: "Actions",
+    enableGlobalFilter: false,
     cell: ({ row }) => (
       <Button variant="outline" size="sm" asChild>
         <Link to={`/users/${row.original.id}/edit`}>
@@ -74,7 +75,7 @@ export function UserListPage() {
           {isLoading ? (
             <div className="text-center text-muted-foreground py-8">Loading...</div>
           ) : (
-            <DataTable columns={columns} data={data?.results ?? []} />
+            <DataTable columns={columns} data={data?.results ?? []} searchPlaceholder="Search users..." />
           )}
         </CardContent>
       </Card>

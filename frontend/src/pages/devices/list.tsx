@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { Device } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DataTable } from "@/components/data-table/data-table";
+import { DataTable, SortableHeader } from "@/components/data-table/data-table";
 import { EnabledBadge } from "@/components/badges";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { useDevices, useDeleteDevice } from "@/hooks/use-devices";
@@ -12,7 +12,7 @@ import { useDevices, useDeleteDevice } from "@/hooks/use-devices";
 const columns: ColumnDef<Device>[] = [
   {
     accessorKey: "name",
-    header: "Name",
+    header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
     cell: ({ row }) => (
       <Link
         to={`/devices/${row.original.id}`}
@@ -24,16 +24,17 @@ const columns: ColumnDef<Device>[] = [
   },
   {
     accessorKey: "hostname",
-    header: "Hostname",
+    header: ({ column }) => <SortableHeader column={column}>Hostname</SortableHeader>,
   },
   {
     accessorKey: "enabled",
-    header: "Enabled",
+    header: ({ column }) => <SortableHeader column={column}>Enabled</SortableHeader>,
     cell: ({ row }) => <EnabledBadge enabled={row.original.enabled} />,
   },
   {
     id: "actions",
     header: "Actions",
+    enableGlobalFilter: false,
     cell: ({ row }) => <DeviceActions device={row.original} />,
   },
 ];
@@ -77,7 +78,7 @@ export function DeviceListPage() {
           {isLoading ? (
             <div className="text-center text-muted-foreground py-8">Loading...</div>
           ) : (
-            <DataTable columns={columns} data={data?.results ?? []} />
+            <DataTable columns={columns} data={data?.results ?? []} searchPlaceholder="Search devices..." />
           )}
         </CardContent>
       </Card>

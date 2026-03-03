@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { CustomRule } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DataTable } from "@/components/data-table/data-table";
+import { DataTable, SortableHeader } from "@/components/data-table/data-table";
 import { SeverityBadge, EnabledBadge } from "@/components/badges";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { useCustomRules, useDeleteCustomRule } from "@/hooks/use-rules";
@@ -16,25 +16,26 @@ export function CustomRuleListPage() {
   const columns: ColumnDef<CustomRule>[] = [
     {
       accessorKey: "name",
-      header: "Name",
+      header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
     },
     {
       accessorKey: "filename",
-      header: "Filename",
+      header: ({ column }) => <SortableHeader column={column}>Filename</SortableHeader>,
     },
     {
       accessorKey: "severity",
-      header: "Severity",
+      header: ({ column }) => <SortableHeader column={column}>Severity</SortableHeader>,
       cell: ({ row }) => <SeverityBadge severity={row.original.severity} />,
     },
     {
       accessorKey: "enabled",
-      header: "Enabled",
+      header: ({ column }) => <SortableHeader column={column}>Enabled</SortableHeader>,
       cell: ({ row }) => <EnabledBadge enabled={row.original.enabled} />,
     },
     {
       id: "actions",
       header: "Actions",
+      enableGlobalFilter: false,
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
@@ -72,7 +73,7 @@ export function CustomRuleListPage() {
 
       <Card>
         <CardContent>
-          <DataTable columns={columns} data={data?.results ?? []} />
+          <DataTable columns={columns} data={data?.results ?? []} searchPlaceholder="Search rules..." />
         </CardContent>
       </Card>
     </div>

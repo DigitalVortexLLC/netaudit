@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { AuditSchedule } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DataTable } from "@/components/data-table/data-table";
+import { DataTable, SortableHeader } from "@/components/data-table/data-table";
 import { EnabledBadge } from "@/components/badges";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { useSchedules, useDeleteSchedule } from "@/hooks/use-schedules";
@@ -12,11 +12,11 @@ import { useSchedules, useDeleteSchedule } from "@/hooks/use-schedules";
 const columns: ColumnDef<AuditSchedule>[] = [
   {
     accessorKey: "name",
-    header: "Name",
+    header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
   },
   {
     accessorKey: "device",
-    header: "Device",
+    header: ({ column }) => <SortableHeader column={column}>Device</SortableHeader>,
     cell: ({ row }) => (
       <span className="text-muted-foreground">{row.original.device}</span>
     ),
@@ -30,12 +30,13 @@ const columns: ColumnDef<AuditSchedule>[] = [
   },
   {
     accessorKey: "enabled",
-    header: "Enabled",
+    header: ({ column }) => <SortableHeader column={column}>Enabled</SortableHeader>,
     cell: ({ row }) => <EnabledBadge enabled={row.original.enabled} />,
   },
   {
     id: "actions",
     header: "Actions",
+    enableGlobalFilter: false,
     cell: ({ row }) => <ScheduleActions schedule={row.original} />,
   },
 ];
@@ -79,7 +80,7 @@ export function ScheduleListPage() {
           {isLoading ? (
             <div className="text-center text-muted-foreground py-8">Loading...</div>
           ) : (
-            <DataTable columns={columns} data={data?.results ?? []} />
+            <DataTable columns={columns} data={data?.results ?? []} searchPlaceholder="Search schedules..." />
           )}
         </CardContent>
       </Card>
