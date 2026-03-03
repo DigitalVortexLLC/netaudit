@@ -1,5 +1,7 @@
 """Tests for config_sources API endpoints."""
 
+from unittest.mock import patch
+
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -256,3 +258,51 @@ class DeviceWithSshConfigSourceAPITests(APITestCase):
         ssh = device.config_source.sshconfigsource
         self.assertEqual(ssh.prompt_overrides["expect_string"], r"router#")
         self.assertEqual(ssh.prompt_overrides["delay_factor"], 2)
+
+
+class FetchConfigAPITests(APITestCase):
+    """Tests for the fetch_config action on DeviceViewSet."""
+
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            username="admin",
+            password="adminpass123",
+            role="admin",
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        self.ndt = NetmikoDeviceType.objects.create(
+            name="Cisco IOS",
+            driver="cisco_ios",
+            default_command="show running-config",
+        )
+
+    @patch("devices.views.config_tasks.enqueue_fetch_config")
+    def test_fetch_config_queues_task(self, mock_enqueue):
+        ssh_source = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.ndt,
+            hostname="10.0.0.1",
+            username="admin",
+        )
+        device = Device.objects.create(
+            name="router1",
+            hostname="10.0.0.1",
+            config_source=ssh_source,
+        )
+        url = reverse("device-fetch-config", kwargs={"pk": device.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.data["status"], "queued")
+        self.assertEqual(response.data["device_id"], device.id)
+        mock_enqueue.assert_called_once_with(device.id)
+
+    def test_fetch_config_no_source_returns_400(self):
+        device = Device.objects.create(
+            name="no-source",
+            hostname="10.0.0.2",
+        )
+        url = reverse("device-fetch-config", kwargs={"pk": device.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)

@@ -5,6 +5,7 @@ from rest_framework.response import Response
 
 from accounts.permissions import IsEditorOrAbove, IsViewerOrAbove
 from audits import tasks as audit_tasks
+from config_sources import tasks as config_tasks
 
 from .models import Device, DeviceGroup
 from .serializers import DeviceGroupSerializer, DeviceSerializer
@@ -69,22 +70,16 @@ class DeviceViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-    @action(detail=True, methods=["get"])
+    @action(detail=True, methods=["post"])
     def fetch_config(self, request, pk=None):
         device = self.get_object()
-        endpoint = device.effective_api_endpoint
-        if not endpoint:
+        if device.config_source is None:
             return Response(
-                {"error": "No API endpoint configured and no default endpoint is set."},
+                {"error": "No config source configured for this device."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        headers = {h.key: h.value for h in device.headers.all()}
-        try:
-            response = requests.get(endpoint, headers=headers, timeout=30)
-            response.raise_for_status()
-            return Response({"config": response.text})
-        except requests.RequestException as exc:
-            return Response(
-                {"error": str(exc)},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+        config_tasks.enqueue_fetch_config(device.id)
+        return Response(
+            {"status": "queued", "device_id": device.id},
+            status=status.HTTP_202_ACCEPTED,
+        )
