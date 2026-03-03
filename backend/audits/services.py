@@ -19,6 +19,7 @@ from django.db.models import Q
 
 from audit_runner.scaffold import cleanup_scaffold, create_scaffold
 from audits.models import AuditRun, RuleResult
+from audits.notifications import send_slack_notification
 from devices.models import Device
 from rules.models import CustomRule, SimpleRule
 
@@ -146,6 +147,10 @@ def run_audit(device_id, trigger="manual"):
                 "completed_at",
             ]
         )
+
+        # Send Slack notification if any rules failed
+        if audit_run.summary.get("failed", 0) > 0:
+            send_slack_notification(audit_run)
 
     except Exception as exc:
         logger.exception("Audit run %s failed", audit_run.id)
