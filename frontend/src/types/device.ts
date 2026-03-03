@@ -4,6 +4,32 @@ export interface DeviceHeader {
   value: string;
 }
 
+export interface SshConfigSourceData {
+  source_type: "ssh";
+  netmiko_device_type: number;
+  hostname?: string;
+  port?: number;
+  username: string;
+  password?: string;
+  ssh_key?: string;
+  command_override?: string;
+  prompt_overrides?: Record<string, unknown>;
+  timeout?: number;
+}
+
+export type ConfigSourceData = SshConfigSourceData | null;
+
+export interface ConfigSourceResponse {
+  source_type: string;
+  netmiko_device_type?: number;
+  hostname?: string;
+  port?: number;
+  username?: string;
+  command_override?: string;
+  prompt_overrides?: Record<string, unknown>;
+  timeout?: number;
+}
+
 export interface Device {
   id: number;
   name: string;
@@ -13,6 +39,9 @@ export interface Device {
   enabled: boolean;
   headers: DeviceHeader[];
   groups: number[];
+  config_source: ConfigSourceResponse | null;
+  last_fetched_config: string;
+  config_fetched_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +63,7 @@ export interface DeviceFormData {
   enabled: boolean;
   headers: DeviceHeader[];
   groups: number[];
+  config_source?: ConfigSourceData;
 }
 
 export interface DeviceGroupFormData {

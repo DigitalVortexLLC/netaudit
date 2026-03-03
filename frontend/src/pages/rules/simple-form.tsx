@@ -12,7 +12,7 @@ import {
   useCreateSimpleRule,
   useUpdateSimpleRule,
 } from "@/hooks/use-rules";
-import { useDevices, useFetchDeviceConfig } from "@/hooks/use-devices";
+import { useDevices, useDevice } from "@/hooks/use-devices";
 import { useGroups } from "@/hooks/use-groups";
 import type { SimpleRuleFormData, RuleType, Severity } from "@/types";
 
@@ -85,7 +85,7 @@ export function SimpleRuleFormPage() {
   const { data: groupsData } = useGroups();
   const createRule = useCreateSimpleRule();
   const updateRule = useUpdateSimpleRule(Number(id));
-  const fetchConfig = useFetchDeviceConfig();
+  const { data: testDevice, isLoading: testDeviceLoading, refetch: refetchTestDevice } = useDevice(testDeviceId ?? 0);
 
   const [formData, setFormData] = useState<SimpleRuleFormData>({
     name: "",
@@ -138,22 +138,24 @@ export function SimpleRuleFormPage() {
     setTestResult(null);
     setFetchError(null);
 
-    if (configText !== null && fetchConfig.variables === testDeviceId) {
+    if (configText !== null) {
       // Reuse already-fetched config
       const result = runRuleTest(configText, formData.pattern, formData.rule_type);
       setTestResult(result);
       return;
     }
 
-    fetchConfig.mutate(testDeviceId, {
-      onSuccess: (config) => {
-        setConfigText(config);
-        const result = runRuleTest(config, formData.pattern, formData.rule_type);
-        setTestResult(result);
-      },
-      onError: (err) => {
-        setFetchError(err instanceof Error ? err.message : "Failed to fetch device config");
-      },
+    refetchTestDevice().then(({ data: device }) => {
+      const config = device?.last_fetched_config ?? "";
+      if (!config) {
+        setFetchError("No config available for this device. Fetch config from the device detail page first.");
+        return;
+      }
+      setConfigText(config);
+      const result = runRuleTest(config, formData.pattern, formData.rule_type);
+      setTestResult(result);
+    }).catch((err) => {
+      setFetchError(err instanceof Error ? err.message : "Failed to fetch device config");
     });
   }
 
@@ -385,10 +387,10 @@ export function SimpleRuleFormPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleTest}
-                disabled={!testDeviceId || !formData.pattern || fetchConfig.isPending}
+                disabled={!testDeviceId || !formData.pattern || testDeviceLoading}
               >
                 <Play className="mr-1 h-3 w-3" />
-                {fetchConfig.isPending ? "Fetching..." : "Test"}
+                {testDeviceLoading ? "Fetching..." : "Test"}
               </Button>
             </div>
           </CardHeader>
