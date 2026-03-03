@@ -79,10 +79,16 @@ export function useTestConnection(id: number) {
 }
 
 export function useFetchDeviceConfig() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (deviceId: number) => {
-      const response = await api.get<{ config: string }>(`/devices/${deviceId}/fetch_config/`);
-      return response.data.config;
+      const response = await api.post<{ status: string; device_id: number }>(`/devices/${deviceId}/fetch_config/`);
+      return response.data;
     },
+    onSuccess: (_, deviceId) => {
+      queryClient.invalidateQueries({ queryKey: ["devices", deviceId] });
+      toast.success("Config fetch queued");
+    },
+    onError: () => toast.error("Failed to trigger config fetch"),
   });
 }
