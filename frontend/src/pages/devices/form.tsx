@@ -6,8 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { useDevice, useCreateDevice, useUpdateDevice } from "@/hooks/use-devices";
 import { useGroups } from "@/hooks/use-groups";
+import { useNetmikoDeviceTypes } from "@/hooks/use-netmiko-device-types";
+import type { ConfigSourceData } from "@/types";
 
 interface HeaderEntry {
   key: string;
@@ -25,12 +28,26 @@ export function DeviceFormPage() {
   const createMutation = useCreateDevice();
   const updateMutation = useUpdateDevice(isEditing ? deviceId : 0);
 
+  const { data: deviceTypesData } = useNetmikoDeviceTypes();
+
   const [name, setName] = useState("");
   const [hostname, setHostname] = useState("");
   const [apiEndpoint, setApiEndpoint] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [headers, setHeaders] = useState<HeaderEntry[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<number[]>([]);
+
+  // Config source state
+  const [sourceType, setSourceType] = useState<"none" | "ssh">("none");
+  const [sshNetmikoDeviceType, setSshNetmikoDeviceType] = useState<number>(0);
+  const [sshHostname, setSshHostname] = useState("");
+  const [sshPort, setSshPort] = useState(22);
+  const [sshUsername, setSshUsername] = useState("");
+  const [sshPassword, setSshPassword] = useState("");
+  const [sshKey, setSshKey] = useState("");
+  const [sshCommandOverride, setSshCommandOverride] = useState("");
+  const [sshPromptOverrides, setSshPromptOverrides] = useState("");
+  const [sshTimeout, setSshTimeout] = useState(30);
 
   useEffect(() => {
     if (isEditing && device) {
@@ -40,11 +57,43 @@ export function DeviceFormPage() {
       setEnabled(device.enabled);
       setHeaders(device.headers.map((h) => ({ key: h.key, value: h.value })));
       setSelectedGroups(device.groups);
+
+      if (device.config_source?.source_type === "ssh") {
+        setSourceType("ssh");
+        setSshNetmikoDeviceType(device.config_source.netmiko_device_type ?? 0);
+        setSshHostname(device.config_source.hostname ?? "");
+        setSshPort(device.config_source.port ?? 22);
+        setSshUsername(device.config_source.username ?? "");
+        setSshCommandOverride(device.config_source.command_override ?? "");
+        setSshPromptOverrides(
+          device.config_source.prompt_overrides
+            ? JSON.stringify(device.config_source.prompt_overrides, null, 2)
+            : ""
+        );
+        setSshTimeout(device.config_source.timeout ?? 30);
+      }
     }
   }, [isEditing, device]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    let config_source: ConfigSourceData = null;
+    if (sourceType === "ssh") {
+      config_source = {
+        source_type: "ssh",
+        netmiko_device_type: sshNetmikoDeviceType,
+        hostname: sshHostname || undefined,
+        port: sshPort,
+        username: sshUsername,
+        password: sshPassword || undefined,
+        ssh_key: sshKey || undefined,
+        command_override: sshCommandOverride || undefined,
+        prompt_overrides: sshPromptOverrides ? JSON.parse(sshPromptOverrides) : undefined,
+        timeout: sshTimeout,
+      };
+    }
+
     const formData = {
       name,
       hostname,
@@ -52,6 +101,7 @@ export function DeviceFormPage() {
       enabled,
       headers: headers.filter((h) => h.key.trim() !== ""),
       groups: selectedGroups,
+      config_source,
     };
 
     const mutation = isEditing ? updateMutation : createMutation;
@@ -185,6 +235,141 @@ export function DeviceFormPage() {
                 </Button>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Configuration Source */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuration Source</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="sourceType"
+                  value="none"
+                  checked={sourceType === "none"}
+                  onChange={() => setSourceType("none")}
+                  className="accent-primary"
+                />
+                <span className="text-sm">None</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="sourceType"
+                  value="ssh"
+                  checked={sourceType === "ssh"}
+                  onChange={() => setSourceType("ssh")}
+                  className="accent-primary"
+                />
+                <span className="text-sm">SSH</span>
+              </label>
+            </div>
+
+            {sourceType === "ssh" && (
+              <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="ssh_device_type">Netmiko Device Type</Label>
+                  <select
+                    id="ssh_device_type"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={sshNetmikoDeviceType}
+                    onChange={(e) => setSshNetmikoDeviceType(Number(e.target.value))}
+                  >
+                    <option value={0}>Select a device type...</option>
+                    {deviceTypesData?.results.map((dt) => (
+                      <option key={dt.id} value={dt.id}>
+                        {dt.name} ({dt.driver})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ssh_hostname">SSH Hostname (optional)</Label>
+                  <Input
+                    id="ssh_hostname"
+                    value={sshHostname}
+                    onChange={(e) => setSshHostname(e.target.value)}
+                    placeholder="Defaults to device hostname"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ssh_port">Port</Label>
+                  <Input
+                    id="ssh_port"
+                    type="number"
+                    value={sshPort}
+                    onChange={(e) => setSshPort(Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ssh_username">Username</Label>
+                  <Input
+                    id="ssh_username"
+                    value={sshUsername}
+                    onChange={(e) => setSshUsername(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ssh_password">Password</Label>
+                  <Input
+                    id="ssh_password"
+                    type="password"
+                    value={sshPassword}
+                    onChange={(e) => setSshPassword(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ssh_key">SSH Key</Label>
+                  <Textarea
+                    id="ssh_key"
+                    value={sshKey}
+                    onChange={(e) => setSshKey(e.target.value)}
+                    rows={4}
+                    placeholder="Paste private key here"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ssh_command_override">Command Override (optional)</Label>
+                  <Input
+                    id="ssh_command_override"
+                    value={sshCommandOverride}
+                    onChange={(e) => setSshCommandOverride(e.target.value)}
+                    placeholder="Overrides the device type default command"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ssh_prompt_overrides">Prompt Overrides (optional, JSON)</Label>
+                  <Textarea
+                    id="ssh_prompt_overrides"
+                    value={sshPromptOverrides}
+                    onChange={(e) => setSshPromptOverrides(e.target.value)}
+                    rows={3}
+                    placeholder='{"expect_string": "#"}'
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ssh_timeout">Timeout (seconds)</Label>
+                  <Input
+                    id="ssh_timeout"
+                    type="number"
+                    value={sshTimeout}
+                    onChange={(e) => setSshTimeout(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
