@@ -5,13 +5,13 @@ Covers:
 - NetmikoDeviceType CRUD and constraints
 - ConfigSource base model
 - SshConfigSource child model with encrypted fields
-- Device ↔ ConfigSource integration
+- Device <-> ConfigSource integration
 """
 
-from django.db import IntegrityError
+from django.db import IntegrityError, models
 from django.test import TestCase
 
-from config_sources.models import NetmikoDeviceType
+from config_sources.models import ConfigSource, NetmikoDeviceType, SshConfigSource
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -87,3 +87,159 @@ class NetmikoDeviceTypeTests(TestCase):
             description="Arista EOS switches",
         )
         self.assertEqual(dt2.description, "Arista EOS switches")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# ConfigSource tests
+# ──────────────────────────────────────────────────────────────────────
+
+
+class ConfigSourceTests(TestCase):
+    def test_create_config_source_directly(self):
+        cs = ConfigSource.objects.create(source_type="ssh")
+        self.assertEqual(cs.source_type, "ssh")
+        self.assertIsNotNone(cs.pk)
+        self.assertIsNotNone(cs.created_at)
+        self.assertIsNotNone(cs.updated_at)
+
+    def test_source_type_choices(self):
+        choices = dict(ConfigSource.SOURCE_TYPES)
+        self.assertIn("api", choices)
+        self.assertIn("git", choices)
+        self.assertIn("manual", choices)
+        self.assertIn("ssh", choices)
+        self.assertEqual(choices["api"], "API Endpoint")
+        self.assertEqual(choices["git"], "Git Repository")
+        self.assertEqual(choices["manual"], "Manual")
+        self.assertEqual(choices["ssh"], "SSH (Netmiko)")
+
+    def test_str_representation(self):
+        cs = ConfigSource.objects.create(source_type="api")
+        self.assertEqual(str(cs), f"ConfigSource(api, pk={cs.pk})")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# SshConfigSource tests
+# ──────────────────────────────────────────────────────────────────────
+
+
+class SshConfigSourceTests(TestCase):
+    def setUp(self):
+        self.device_type = NetmikoDeviceType.objects.create(
+            name="Cisco IOS",
+            driver="cisco_ios",
+            default_command="show running-config",
+        )
+
+    def test_create_ssh_source(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            hostname="192.168.1.1",
+            username="admin",
+            password="secret123",
+        )
+        self.assertEqual(ssh.source_type, "ssh")
+        self.assertEqual(ssh.hostname, "192.168.1.1")
+        self.assertEqual(ssh.username, "admin")
+        self.assertEqual(ssh.password, "secret123")
+        self.assertEqual(ssh.netmiko_device_type, self.device_type)
+        self.assertIsNotNone(ssh.pk)
+
+    def test_ssh_source_inherits_from_config_source(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+        )
+        self.assertIsInstance(ssh, ConfigSource)
+        # The parent ConfigSource record should also exist
+        cs = ConfigSource.objects.get(pk=ssh.pk)
+        self.assertEqual(cs.source_type, "ssh")
+
+    def test_ssh_key_blank_by_default(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+        )
+        self.assertEqual(ssh.ssh_key, "")
+
+    def test_command_override_blank_by_default(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+        )
+        self.assertEqual(ssh.command_override, "")
+
+    def test_prompt_overrides_default_empty_dict(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+        )
+        self.assertEqual(ssh.prompt_overrides, {})
+
+    def test_prompt_overrides_stored(self):
+        overrides = {"expect_string": r"router#", "delay_factor": 2}
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+            prompt_overrides=overrides,
+        )
+        ssh.refresh_from_db()
+        self.assertEqual(ssh.prompt_overrides, overrides)
+
+    def test_hostname_blank_by_default(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+        )
+        self.assertEqual(ssh.hostname, "")
+
+    def test_default_port_is_22(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+        )
+        self.assertEqual(ssh.port, 22)
+
+    def test_delete_netmiko_device_type_blocked(self):
+        SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+        )
+        with self.assertRaises(models.ProtectedError):
+            self.device_type.delete()
+
+    def test_password_field_is_encrypted(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+            password="my_secret_password",
+        )
+        ssh.refresh_from_db()
+        self.assertEqual(ssh.password, "my_secret_password")
+
+    def test_str_with_hostname(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            hostname="10.0.0.1",
+            username="admin",
+        )
+        self.assertEqual(str(ssh), "SSH: admin@10.0.0.1 via cisco_ios")
+
+    def test_str_without_hostname(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+        )
+        self.assertEqual(str(ssh), "SSH: admin@(device hostname) via cisco_ios")
