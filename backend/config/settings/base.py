@@ -170,8 +170,9 @@ REST_AUTH = {
 }
 
 # django-encrypted-model-fields
+import base64 as _base64
 import os as _os
 FIELD_ENCRYPTION_KEY = _os.environ.get(
     "FIELD_ENCRYPTION_KEY",
-    SECRET_KEY[:32].ljust(32, "x"),
+    _base64.urlsafe_b64encode(SECRET_KEY[:32].ljust(32, "x").encode()[:32]).decode(),
 )
