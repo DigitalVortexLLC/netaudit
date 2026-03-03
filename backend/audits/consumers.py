@@ -2,10 +2,10 @@
 
 import json
 
-from channels.generic.websocket import AsyncWebSocketConsumer
+from channels.generic.websocket import AsyncWebsocketConsumer
 
 
-class DashboardConsumer(AsyncWebSocketConsumer):
+class DashboardConsumer(AsyncWebsocketConsumer):
     """
     Broadcasts live updates to the dashboard.
 
@@ -34,7 +34,7 @@ class DashboardConsumer(AsyncWebSocketConsumer):
         await self.send(text_data=json.dumps(event["data"]))
 
 
-class AuditDetailConsumer(AsyncWebSocketConsumer):
+class AuditDetailConsumer(AsyncWebsocketConsumer):
     """
     Broadcasts live progress for a single audit run.
 
