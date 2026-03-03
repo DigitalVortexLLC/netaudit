@@ -18,6 +18,7 @@ from django.conf import settings
 from django.db.models import Q
 
 from audit_runner.scaffold import cleanup_scaffold, create_scaffold
+from audits.broadcast import broadcast_audit_status, broadcast_rule_result
 from audits.models import AuditRun, RuleResult
 from audits.notifications import send_slack_notification
 from devices.models import Device
@@ -59,6 +60,7 @@ def run_audit(device_id, trigger="manual"):
         audit_run.status = "fetching_config"
         audit_run.started_at = datetime.now(timezone.utc)
         audit_run.save(update_fields=["status", "started_at"])
+        broadcast_audit_status(audit_run)
 
         try:
             config_text = _fetch_config(device)
@@ -66,6 +68,7 @@ def run_audit(device_id, trigger="manual"):
             audit_run.status = "failed"
             audit_run.error_message = f"Config fetch failed: {exc}"
             audit_run.save(update_fields=["status", "error_message"])
+            broadcast_audit_status(audit_run)
             return audit_run.id
 
         audit_run.config_snapshot = config_text
@@ -83,6 +86,7 @@ def run_audit(device_id, trigger="manual"):
         # ----------------------------------------------------------
         audit_run.status = "running_rules"
         audit_run.save(update_fields=["status"])
+        broadcast_audit_status(audit_run)
 
         scaffold_path = create_scaffold(
             audit_run, config_text, simple_rules, custom_rules
@@ -148,6 +152,7 @@ def run_audit(device_id, trigger="manual"):
                 "completed_at",
             ]
         )
+        broadcast_audit_status(audit_run)
 
         # ----------------------------------------------------------
         # 6. Dispatch webhook notifications
@@ -163,6 +168,7 @@ def run_audit(device_id, trigger="manual"):
         audit_run.status = "failed"
         audit_run.error_message = str(exc)
         audit_run.save(update_fields=["status", "error_message"])
+        broadcast_audit_status(audit_run)
     finally:
         if scaffold_path is not None:
             cleanup_scaffold(scaffold_path)
@@ -251,6 +257,8 @@ def _parse_results(audit_run, report, device):
 
     if rule_results:
         RuleResult.objects.bulk_create(rule_results)
+        for rr in rule_results:
+            broadcast_rule_result(audit_run, rr)
 
 
 def _gather_simple_rules(device):
