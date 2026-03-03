@@ -85,7 +85,6 @@ export function SimpleRuleFormPage() {
   const { data: groupsData } = useGroups();
   const createRule = useCreateSimpleRule();
   const updateRule = useUpdateSimpleRule(Number(id));
-  const { data: testDevice, isLoading: testDeviceLoading, refetch: refetchTestDevice } = useDevice(testDeviceId ?? 0);
 
   const [formData, setFormData] = useState<SimpleRuleFormData>({
     name: "",
@@ -100,6 +99,7 @@ export function SimpleRuleFormPage() {
 
   // Test panel state
   const [testDeviceId, setTestDeviceId] = useState<number | null>(null);
+  const { isLoading: testDeviceLoading, refetch: refetchTestDevice } = useDevice(testDeviceId ?? 0);
   const [configText, setConfigText] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
