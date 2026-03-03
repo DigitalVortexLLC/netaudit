@@ -12,6 +12,7 @@ from django.db import IntegrityError, models
 from django.test import TestCase
 
 from config_sources.models import ConfigSource, NetmikoDeviceType, SshConfigSource
+from devices.models import Device
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -243,3 +244,70 @@ class SshConfigSourceTests(TestCase):
             username="admin",
         )
         self.assertEqual(str(ssh), "SSH: admin@(device hostname) via cisco_ios")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Device ↔ ConfigSource integration tests
+# ──────────────────────────────────────────────────────────────────────
+
+
+class DeviceConfigSourceTests(TestCase):
+    def setUp(self):
+        self.device_type = NetmikoDeviceType.objects.create(
+            name="Cisco IOS",
+            driver="cisco_ios",
+            default_command="show running-config",
+        )
+
+    def test_device_config_source_nullable(self):
+        device = Device.objects.create(
+            name="router1",
+            hostname="192.168.1.1",
+        )
+        self.assertIsNone(device.config_source)
+
+    def test_device_can_link_to_ssh_source(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            hostname="192.168.1.1",
+            username="admin",
+        )
+        device = Device.objects.create(
+            name="router1",
+            hostname="192.168.1.1",
+            config_source=ssh,
+        )
+        device.refresh_from_db()
+        self.assertEqual(device.config_source_id, ssh.pk)
+
+    def test_last_fetched_config_blank_by_default(self):
+        device = Device.objects.create(
+            name="router1",
+            hostname="192.168.1.1",
+        )
+        self.assertEqual(device.last_fetched_config, "")
+
+    def test_config_fetched_at_null_by_default(self):
+        device = Device.objects.create(
+            name="router1",
+            hostname="192.168.1.1",
+        )
+        self.assertIsNone(device.config_fetched_at)
+
+    def test_delete_config_source_sets_null(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            hostname="192.168.1.1",
+            username="admin",
+        )
+        device = Device.objects.create(
+            name="router1",
+            hostname="192.168.1.1",
+            config_source=ssh,
+        )
+        # Delete the config source (must delete child first, then parent)
+        ssh.delete()
+        device.refresh_from_db()
+        self.assertIsNone(device.config_source)

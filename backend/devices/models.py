@@ -24,6 +24,15 @@ class Device(models.Model):
         related_name="devices",
         blank=True,
     )
+    config_source = models.OneToOneField(
+        "config_sources.ConfigSource",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="device",
+    )
+    last_fetched_config = models.TextField(blank=True, default="")
+    config_fetched_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
