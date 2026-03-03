@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Server, FolderTree, Shield, Code,
-  ClipboardCheck, Clock, Settings, LogOut, UserCircle, Search, ChevronDown,
+  ClipboardCheck, Clock, Settings, LogOut, UserCircle, Search, ChevronDown, Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,10 +47,11 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, exact: true },
   {
     label: "Netbox",
-    prefixes: ["/devices", "/groups"],
+    prefixes: ["/devices", "/groups", "/netmiko-device-types"],
     children: [
       { label: "Devices", href: "/devices", icon: Server },
       { label: "Groups", href: "/groups", icon: FolderTree },
+      { label: "Device Types", href: "/netmiko-device-types", icon: Terminal },
     ],
   },
   {

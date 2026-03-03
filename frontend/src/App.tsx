@@ -30,6 +30,8 @@ import { SettingsPage } from "@/pages/settings";
 import { UserListPage } from "@/pages/users/list";
 import { UserEditPage } from "@/pages/users/edit";
 import { ProfilePage } from "@/pages/profile";
+import { NetmikoDeviceTypeListPage } from "@/pages/netmiko-device-types/list";
+import { NetmikoDeviceTypeFormPage } from "@/pages/netmiko-device-types/form";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +61,9 @@ export default function App() {
                 <Route path="/devices/new" element={<DeviceFormPage />} />
                 <Route path="/devices/:id" element={<DeviceDetailPage />} />
                 <Route path="/devices/:id/edit" element={<DeviceFormPage />} />
+                <Route path="/netmiko-device-types" element={<NetmikoDeviceTypeListPage />} />
+                <Route path="/netmiko-device-types/new" element={<NetmikoDeviceTypeFormPage />} />
+                <Route path="/netmiko-device-types/:id/edit" element={<NetmikoDeviceTypeFormPage />} />
                 <Route path="/groups" element={<GroupListPage />} />
                 <Route path="/groups/new" element={<GroupFormPage />} />
                 <Route path="/groups/:id" element={<GroupDetailPage />} />
