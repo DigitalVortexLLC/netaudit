@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDashboardSummary, useAuditRuns, useRecentIssues } from "@/hooks/use-audits";
+import { useDashboardWebSocket } from "@/hooks/use-websocket";
 import type { Severity } from "@/types";
 import { StatusBadge, TriggerBadge, SeverityBadge, OutcomeBadge } from "@/components/badges";
 import { ComplianceChart } from "@/components/compliance-chart";
 
 export function DashboardPage() {
+  useDashboardWebSocket();
   const summary = useDashboardSummary();
   const audits = useAuditRuns({ ordering: "-created_at", page_size: "10" });
   const issues = useRecentIssues();

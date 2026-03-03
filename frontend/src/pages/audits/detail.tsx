@@ -16,12 +16,15 @@ import { TagBadge } from "@/components/tag-badge";
 import { TagSelector } from "@/components/tag-selector";
 import { CommentSection } from "@/components/comment-section";
 import { useAuditRun, useAuditConfig } from "@/hooks/use-audits";
+import { useAuditWebSocket } from "@/hooks/use-websocket";
 import { useTags, useAddAuditTag, useRemoveAuditTag } from "@/hooks/use-tags";
 import type { Severity } from "@/types";
 
 export function AuditDetailPage() {
   const { id } = useParams();
-  const { data: audit, isLoading } = useAuditRun(Number(id));
+  const auditId = Number(id);
+  useAuditWebSocket(auditId);
+  const { data: audit, isLoading } = useAuditRun(auditId);
   const { data: configData } = useAuditConfig(Number(id));
   const { data: allTags = [] } = useTags();
   const addTag = useAddAuditTag(Number(id));

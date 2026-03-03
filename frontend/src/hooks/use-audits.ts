@@ -25,10 +25,11 @@ export function useAuditRun(id: number) {
       return response.data;
     },
     enabled: !!id,
+    // WebSocket pushes real-time updates; this is a fallback safety net
     refetchInterval: (query) => {
       const data = query.state.data;
       if (data && IN_PROGRESS_STATUSES.includes(data.status)) {
-        return 3000;
+        return 10000;
       }
       return false;
     },
