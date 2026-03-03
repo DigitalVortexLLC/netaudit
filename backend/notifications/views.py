@@ -45,7 +45,7 @@ class WebhookProviderViewSet(viewsets.ModelViewSet):
                 "success": True,
                 "status_code": response.status_code,
             })
-        except http_requests.RequestException as exc:
+        except Exception as exc:
             return Response(
                 {"success": False, "error": str(exc)},
                 status=status.HTTP_502_BAD_GATEWAY,
