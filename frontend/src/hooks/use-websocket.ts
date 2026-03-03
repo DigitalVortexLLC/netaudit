@@ -25,7 +25,7 @@ function getWsBaseUrl(): string {
  */
 export function useWebSocket(path: string, onMessage: MessageHandler) {
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
 
