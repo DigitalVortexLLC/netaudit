@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Plus, Save, Pencil, Trash2, Zap, Loader2, Send } from "lucide-react";
+import { Plus, Save, Pencil, Trash2, Zap, Loader2, Send, UserX, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -35,9 +36,11 @@ import {
   useDeleteWebhook,
   useTestWebhook,
 } from "@/hooks/use-webhooks";
+import { useUsers, useUpdateUser, useToggleUserActive } from "@/hooks/use-users";
+import { useAuth } from "@/hooks/use-auth";
 import { TagBadge } from "@/components/tag-badge";
 import { DeleteDialog } from "@/components/delete-dialog";
-import type { WebhookProvider, WebhookHeader, WebhookProviderFormData } from "@/types";
+import type { WebhookProvider, WebhookHeader, WebhookProviderFormData, User, UserRole } from "@/types";
 
 function WebhookFormDialog({
   webhook,
@@ -299,7 +302,196 @@ function WebhooksCard() {
   );
 }
 
+function UserRoleDialog({
+  user,
+  open,
+  onOpenChange,
+}: {
+  user: User;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const updateMutation = useUpdateUser(user.id);
+  const [role, setRole] = useState<UserRole>(user.role);
+  const [isApiEnabled, setIsApiEnabled] = useState(user.is_api_enabled);
+
+  useEffect(() => {
+    if (open) {
+      setRole(user.role);
+      setIsApiEnabled(user.is_api_enabled);
+    }
+  }, [user, open]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateMutation.mutateAsync({ role, is_api_enabled: isApiEnabled });
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Edit User: {user.username}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="user-role">Role</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
+              <SelectTrigger id="user-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="editor">Editor</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="user-api-enabled"
+              checked={isApiEnabled}
+              onCheckedChange={(checked) => setIsApiEnabled(checked === true)}
+            />
+            <Label htmlFor="user-api-enabled">API Enabled</Label>
+          </div>
+          <Button type="submit" disabled={updateMutation.isPending} className="w-full">
+            {updateMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Save
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function UserManagementCard() {
+  const { user: currentUser } = useAuth();
+  const { data: usersData, isLoading } = useUsers();
+  const toggleActive = useToggleUserActive();
+  const [editingUser, setEditingUser] = useState<User | undefined>();
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const users = usersData?.results ?? [];
+  const isAdmin = currentUser?.role === "admin";
+
+  if (!isAdmin) return null;
+
+  const handleEdit = (user: User) => {
+    setEditingUser(user);
+    setDialogOpen(true);
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>User Management</CardTitle>
+          <CardDescription>
+            Manage user accounts, assign roles, and control access.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center text-muted-foreground py-4">Loading users...</div>
+          ) : users.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No users found.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Username</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>API</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id} className={!user.is_active ? "opacity-60" : ""}>
+                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {user.email}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{user.role}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          user.is_active
+                            ? "bg-green-500/10 text-green-500"
+                            : "bg-red-500/10 text-red-500"
+                        }`}
+                      >
+                        {user.is_active ? "Active" : "Disabled"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${
+                          user.is_api_enabled ? "bg-green-500" : "bg-gray-300"
+                        }`}
+                      />
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(user.date_joined).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(user)}
+                          title="Edit role & permissions"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {user.id !== currentUser?.id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleActive.mutate(user.id)}
+                            disabled={toggleActive.isPending}
+                            title={user.is_active ? "Disable user" : "Enable user"}
+                          >
+                            {user.is_active ? (
+                              <UserX className="h-4 w-4" />
+                            ) : (
+                              <UserCheck className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+      {editingUser && (
+        <UserRoleDialog
+          user={editingUser}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+        />
+      )}
+    </>
+  );
+}
+
 export function SettingsPage() {
+  const { user: currentUser } = useAuth();
   const { data: settings, isLoading } = useSiteSettings();
   const updateMutation = useUpdateSiteSettings();
 
@@ -309,9 +501,12 @@ export function SettingsPage() {
 
   const [defaultApiEndpoint, setDefaultApiEndpoint] = useState("");
   const [slackWebhookUrl, setSlackWebhookUrl] = useState("");
+  const [publicRegistrationEnabled, setPublicRegistrationEnabled] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const testSlack = useTestSlackWebhook();
+
+  const isAdmin = currentUser?.role === "admin";
 
   const handleAddTag = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,6 +519,7 @@ export function SettingsPage() {
     if (settings) {
       setDefaultApiEndpoint(settings.default_api_endpoint);
       setSlackWebhookUrl(settings.slack_webhook_url);
+      setPublicRegistrationEnabled(settings.public_registration_enabled);
     }
   }, [settings]);
 
@@ -333,6 +529,7 @@ export function SettingsPage() {
     await updateMutation.mutateAsync({
       default_api_endpoint: defaultApiEndpoint,
       slack_webhook_url: slackWebhookUrl,
+      public_registration_enabled: publicRegistrationEnabled,
     });
     setSuccessMessage("Settings saved successfully.");
   };
@@ -364,6 +561,24 @@ export function SettingsPage() {
               </p>
             </div>
 
+            {isAdmin && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="public_registration"
+                  checked={publicRegistrationEnabled}
+                  onCheckedChange={(checked) =>
+                    setPublicRegistrationEnabled(checked === true)
+                  }
+                />
+                <div>
+                  <Label htmlFor="public_registration">Public Registration</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow new users to create accounts via the signup page.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {successMessage && (
               <p className="text-sm text-green-500">{successMessage}</p>
             )}
@@ -381,6 +596,9 @@ export function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      {isAdmin && <UserManagementCard />}
+
       <Card>
         <CardHeader>
           <CardTitle>Tags</CardTitle>

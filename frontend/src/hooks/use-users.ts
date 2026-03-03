@@ -39,3 +39,18 @@ export function useUpdateUser(id: number) {
     onError: () => toast.error("Operation failed"),
   });
 }
+
+export function useToggleUserActive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await api.patch<User>(`/auth/users/${id}/toggle_active/`);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success(`User ${data.is_active ? "enabled" : "disabled"}`);
+    },
+    onError: () => toast.error("Operation failed"),
+  });
+}

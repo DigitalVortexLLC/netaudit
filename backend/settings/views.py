@@ -1,5 +1,6 @@
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from audits.notifications import send_test_slack_notification
@@ -38,3 +39,11 @@ def test_slack_view(request):
         {"success": False, "error": "Failed to send test message"},
         status=status.HTTP_502_BAD_GATEWAY,
     )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def registration_status_view(request):
+    """Public endpoint to check if registration is enabled."""
+    settings = SiteSettings.load()
+    return Response({"public_registration_enabled": settings.public_registration_enabled})

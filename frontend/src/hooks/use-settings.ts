@@ -40,3 +40,15 @@ export function useTestSlackWebhook() {
     onError: () => toast.error("Failed to send test message"),
   });
 }
+
+export function useRegistrationStatus() {
+  return useQuery({
+    queryKey: ["registration-status"],
+    queryFn: async () => {
+      const response = await api.get<{ public_registration_enabled: boolean }>(
+        "/settings/registration-status/"
+      );
+      return response.data;
+    },
+  });
+}

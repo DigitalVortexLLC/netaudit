@@ -13,6 +13,10 @@ class SiteSettings(models.Model):
         default="",
         help_text="Slack incoming webhook URL for audit failure notifications.",
     )
+    public_registration_enabled = models.BooleanField(
+        default=True,
+        help_text="Allow new users to register via the public signup page.",
+    )
 
     class Meta:
         verbose_name = "site settings"
