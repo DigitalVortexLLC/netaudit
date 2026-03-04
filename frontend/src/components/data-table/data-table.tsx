@@ -2,13 +2,14 @@ import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
+  getFilteredRowModel,
   getSortedRowModel,
   type SortingState,
   useReactTable,
   type Column,
 } from "@tanstack/react-table";
 import { useState, type ReactNode } from "react";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -18,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DataTablePagination } from "./data-table-pagination";
+import { DataTableToolbar } from "./data-table-toolbar";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -26,6 +28,7 @@ interface DataTableProps<TData, TValue> {
   page?: number;
   onPageChange?: (page: number) => void;
   totalCount?: number;
+  searchPlaceholder?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -35,22 +38,33 @@ export function DataTable<TData, TValue>({
   page,
   onPageChange,
   totalCount,
+  searchPlaceholder,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState("");
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
-    state: { sorting },
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: "includesString",
+    state: { sorting, globalFilter },
     manualPagination: true,
     pageCount: pageCount ?? -1,
   });
 
   return (
     <div>
+      <DataTableToolbar
+        table={table}
+        globalFilter={globalFilter}
+        onGlobalFilterChange={setGlobalFilter}
+        searchPlaceholder={searchPlaceholder}
+      />
       <div className="rounded-md border border-border">
         <Table>
           <TableHeader>
@@ -101,13 +115,20 @@ export function DataTable<TData, TValue>({
 
 // Sortable header helper
 export function SortableHeader<TData>({ column, children }: { column: Column<TData, unknown>; children: ReactNode }) {
+  const sorted = column.getIsSorted();
   return (
     <button
       className="flex items-center gap-1 hover:text-foreground"
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      onClick={() => column.toggleSorting(sorted === "asc")}
     >
       {children}
-      <ArrowUpDown className="h-3 w-3" />
+      {sorted === "asc" ? (
+        <ArrowUp className="h-3 w-3" />
+      ) : sorted === "desc" ? (
+        <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-50" />
+      )}
     </button>
   );
 }

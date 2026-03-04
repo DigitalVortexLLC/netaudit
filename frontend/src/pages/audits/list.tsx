@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { AuditRun } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DataTable } from "@/components/data-table/data-table";
+import { DataTable, SortableHeader } from "@/components/data-table/data-table";
 import { StatusBadge, TriggerBadge } from "@/components/badges";
 import { TagBadge } from "@/components/tag-badge";
 import { useAuditRuns } from "@/hooks/use-audits";
@@ -13,7 +13,7 @@ import { useTags } from "@/hooks/use-tags";
 const columns: ColumnDef<AuditRun>[] = [
   {
     accessorKey: "device_name",
-    header: "Device",
+    header: ({ column }) => <SortableHeader column={column}>Device</SortableHeader>,
     cell: ({ row }) => (
       <Link
         to={`/audits/${row.original.id}`}
@@ -25,17 +25,18 @@ const columns: ColumnDef<AuditRun>[] = [
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => <SortableHeader column={column}>Status</SortableHeader>,
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
   },
   {
     accessorKey: "trigger",
-    header: "Trigger",
+    header: ({ column }) => <SortableHeader column={column}>Trigger</SortableHeader>,
     cell: ({ row }) => <TriggerBadge trigger={row.original.trigger} />,
   },
   {
     id: "tags",
     header: "Tags",
+    enableGlobalFilter: false,
     cell: ({ row }) => (
       <div className="flex flex-wrap gap-1">
         {row.original.tags?.map((tag) => (
@@ -47,6 +48,7 @@ const columns: ColumnDef<AuditRun>[] = [
   {
     id: "summary",
     header: "Summary",
+    enableGlobalFilter: false,
     cell: ({ row }) => {
       const summary = row.original.summary;
       return summary ? `${summary.passed}P / ${summary.failed}F` : "\u2014";
@@ -54,7 +56,7 @@ const columns: ColumnDef<AuditRun>[] = [
   },
   {
     accessorKey: "created_at",
-    header: "Date",
+    header: ({ column }) => <SortableHeader column={column}>Date</SortableHeader>,
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {new Date(row.original.created_at).toLocaleString()}
@@ -95,7 +97,7 @@ export function AuditListPage() {
           {isLoading ? (
             <div className="text-center text-muted-foreground py-8">Loading...</div>
           ) : (
-            <DataTable columns={columns} data={data?.results ?? []} />
+            <DataTable columns={columns} data={data?.results ?? []} searchPlaceholder="Search audits..." />
           )}
         </CardContent>
       </Card>

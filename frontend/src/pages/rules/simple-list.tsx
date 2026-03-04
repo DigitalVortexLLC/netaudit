@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { SimpleRule } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DataTable } from "@/components/data-table/data-table";
+import { DataTable, SortableHeader } from "@/components/data-table/data-table";
 import { SeverityBadge, EnabledBadge } from "@/components/badges";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { useSimpleRules, useDeleteSimpleRule } from "@/hooks/use-rules";
@@ -16,15 +16,15 @@ export function SimpleRuleListPage() {
   const columns: ColumnDef<SimpleRule>[] = [
     {
       accessorKey: "name",
-      header: "Name",
+      header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
     },
     {
       accessorKey: "rule_type",
-      header: "Rule Type",
+      header: ({ column }) => <SortableHeader column={column}>Rule Type</SortableHeader>,
     },
     {
       accessorKey: "pattern",
-      header: "Pattern",
+      header: ({ column }) => <SortableHeader column={column}>Pattern</SortableHeader>,
       cell: ({ row }) => {
         const pattern = row.original.pattern;
         return pattern.length > 30 ? `${pattern.slice(0, 30)}...` : pattern;
@@ -32,17 +32,18 @@ export function SimpleRuleListPage() {
     },
     {
       accessorKey: "severity",
-      header: "Severity",
+      header: ({ column }) => <SortableHeader column={column}>Severity</SortableHeader>,
       cell: ({ row }) => <SeverityBadge severity={row.original.severity} />,
     },
     {
       accessorKey: "enabled",
-      header: "Enabled",
+      header: ({ column }) => <SortableHeader column={column}>Enabled</SortableHeader>,
       cell: ({ row }) => <EnabledBadge enabled={row.original.enabled} />,
     },
     {
       id: "actions",
       header: "Actions",
+      enableGlobalFilter: false,
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
@@ -80,7 +81,7 @@ export function SimpleRuleListPage() {
 
       <Card>
         <CardContent>
-          <DataTable columns={columns} data={data?.results ?? []} />
+          <DataTable columns={columns} data={data?.results ?? []} searchPlaceholder="Search rules..." />
         </CardContent>
       </Card>
     </div>

@@ -4,14 +4,14 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { DeviceGroup } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DataTable } from "@/components/data-table/data-table";
+import { DataTable, SortableHeader } from "@/components/data-table/data-table";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { useGroups, useDeleteGroup } from "@/hooks/use-groups";
 
 const columns: ColumnDef<DeviceGroup>[] = [
   {
     accessorKey: "name",
-    header: "Name",
+    header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
     cell: ({ row }) => (
       <Link
         to={`/groups/${row.original.id}`}
@@ -23,7 +23,7 @@ const columns: ColumnDef<DeviceGroup>[] = [
   },
   {
     accessorKey: "description",
-    header: "Description",
+    header: ({ column }) => <SortableHeader column={column}>Description</SortableHeader>,
     cell: ({ row }) => {
       const desc = row.original.description;
       return desc && desc.length > 50 ? `${desc.slice(0, 50)}...` : desc || "\u2014";
@@ -31,11 +31,12 @@ const columns: ColumnDef<DeviceGroup>[] = [
   },
   {
     accessorKey: "device_count",
-    header: "Device Count",
+    header: ({ column }) => <SortableHeader column={column}>Device Count</SortableHeader>,
   },
   {
     id: "actions",
     header: "Actions",
+    enableGlobalFilter: false,
     cell: function ActionsCell({ row }) {
       const deleteGroup = useDeleteGroup();
       return (
@@ -81,6 +82,7 @@ export function GroupListPage() {
               data={data?.results ?? []}
               pageCount={data ? Math.ceil(data.count / 25) : 1}
               totalCount={data?.count}
+              searchPlaceholder="Search groups..."
             />
           )}
         </CardContent>
