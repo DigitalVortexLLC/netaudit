@@ -80,64 +80,66 @@ export function GroupDetailPage() {
         </div>
       </div>
 
-      {/* Info Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Group Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <dt className="text-sm font-medium text-muted-foreground">Name</dt>
-              <dd className="mt-1">{group.name}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-muted-foreground">Device Count</dt>
-              <dd className="mt-1">{group.device_count}</dd>
-            </div>
-            <div className="sm:col-span-2">
-              <dt className="text-sm font-medium text-muted-foreground">Description</dt>
-              <dd className="mt-1">{group.description || "\u2014"}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-muted-foreground">Created</dt>
-              <dd className="mt-1">{new Date(group.created_at).toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-muted-foreground">Updated</dt>
-              <dd className="mt-1">{new Date(group.updated_at).toLocaleString()}</dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Info Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Group Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="space-y-4">
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Name</dt>
+                <dd className="mt-1">{group.name}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Device Count</dt>
+                <dd className="mt-1">{group.device_count}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Description</dt>
+                <dd className="mt-1">{group.description || "\u2014"}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Created</dt>
+                <dd className="mt-1">{new Date(group.created_at).toLocaleString()}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-muted-foreground">Updated</dt>
+                <dd className="mt-1">{new Date(group.updated_at).toLocaleString()}</dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
 
-      {/* Member Devices Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Member Devices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {memberDevices.length === 0 ? (
-            <p className="text-muted-foreground">No devices in this group.</p>
-          ) : (
-            <ul className="space-y-2">
-              {memberDevices.map((device) => (
-                <li key={device.id}>
-                  <Link
-                    to={`/devices/${device.id}`}
-                    className="text-primary hover:underline"
-                  >
-                    {device.name}
-                  </Link>
-                  <span className="ml-2 text-sm text-muted-foreground">
-                    ({device.hostname})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+        {/* Member Devices Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Member Devices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {memberDevices.length === 0 ? (
+              <p className="text-muted-foreground">No devices in this group.</p>
+            ) : (
+              <ul className="space-y-2">
+                {memberDevices.map((device) => (
+                  <li key={device.id}>
+                    <Link
+                      to={`/devices/${device.id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {device.name}
+                    </Link>
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      ({device.hostname})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
