@@ -24,11 +24,11 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "django_q",
-    "django_htmx",
     "django.contrib.sites",
     "allauth",
     "allauth.account",
     "allauth.mfa",
+    "allauth.headless",
     "allauth.socialaccount",
     "dj_rest_auth",
     "dj_rest_auth.registration",
@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     "devices",
     "rules",
     "audits",
-    "common",
     "settings",
     "notifications",
     "config_sources",
@@ -55,7 +54,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django_htmx.middleware.HtmxMiddleware",
     "accounts.middleware.AuthHookMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
@@ -65,7 +63,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -73,7 +71,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "accounts.context_processors.user_role",
             ],
         },
     },
@@ -97,8 +94,6 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Django REST Framework
@@ -144,8 +139,12 @@ ACCOUNT_EMAIL_VERIFICATION = "optional"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_ADAPTER = "accounts.adapters.AccountAdapter"
-LOGIN_REDIRECT_URL = "/"
-LOGIN_URL = "/accounts/login/"
+HEADLESS_ONLY = True
+HEADLESS_FRONTEND_URLS = {
+    "account_confirm_email": "/verify-email/{key}",
+    "account_reset_password_from_key": "/reset-password/{key}",
+    "account_signup": "/signup",
+}
 
 # allauth MFA / WebAuthn
 MFA_SUPPORTED_TYPES = ["recovery_codes", "totp", "webauthn"]
