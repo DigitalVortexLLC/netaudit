@@ -1,9 +1,0 @@
-{% if success %}
-<div class="result-box result-success">
-    Connection successful &mdash; Status: {{ status_code }}, Size: {{ content_length }} bytes
-</div>
-{% else %}
-<div class="result-box result-error">
-    Connection failed &mdash; {{ error }}
-</div>
-{% endif %}
