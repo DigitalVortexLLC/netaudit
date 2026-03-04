@@ -89,6 +89,38 @@ class NetmikoDeviceTypeAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(NetmikoDeviceType.objects.filter(pk=self.ndt.pk).exists())
 
+    def test_create_device_type_with_extra_commands(self):
+        data = {
+            "name": "Cisco IOS XE",
+            "driver": "cisco_ios",
+            "default_command": "show running-config",
+            "extra_commands": ["write memory", "show version"],
+        }
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["extra_commands"], ["write memory", "show version"])
+        dt = NetmikoDeviceType.objects.get(name="Cisco IOS XE")
+        self.assertEqual(dt.extra_commands, ["write memory", "show version"])
+
+    def test_retrieve_device_type_includes_extra_commands(self):
+        self.ndt.extra_commands = ["write memory"]
+        self.ndt.save()
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["extra_commands"], ["write memory"])
+
+    def test_update_device_type_extra_commands(self):
+        data = {
+            "name": "Cisco IOS",
+            "driver": "cisco_ios",
+            "default_command": "show running-config",
+            "extra_commands": ["write memory"],
+        }
+        response = self.client.put(self.detail_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.ndt.refresh_from_db()
+        self.assertEqual(self.ndt.extra_commands, ["write memory"])
+
     def test_viewer_can_list(self):
         self.client.force_authenticate(user=self.viewer_user)
         response = self.client.get(self.list_url)
@@ -258,6 +290,40 @@ class DeviceWithSshConfigSourceAPITests(APITestCase):
         ssh = device.config_source.sshconfigsource
         self.assertEqual(ssh.prompt_overrides["expect_string"], r"router#")
         self.assertEqual(ssh.prompt_overrides["delay_factor"], 2)
+
+
+    def test_create_ssh_source_with_extra_commands(self):
+        data = {
+            "name": "router8",
+            "hostname": "10.0.0.8",
+            "config_source": {
+                "source_type": "ssh",
+                "netmiko_device_type": self.ndt.pk,
+                "username": "admin",
+                "extra_commands": ["write memory"],
+            },
+        }
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        device = Device.objects.get(name="router8")
+        ssh = device.config_source.sshconfigsource
+        self.assertEqual(ssh.extra_commands, ["write memory"])
+
+    def test_device_response_includes_extra_commands(self):
+        data = {
+            "name": "router9",
+            "hostname": "10.0.0.9",
+            "config_source": {
+                "source_type": "ssh",
+                "netmiko_device_type": self.ndt.pk,
+                "username": "admin",
+                "extra_commands": ["write memory", "show version"],
+            },
+        }
+        response = self.client.post(self.list_url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        cs = response.data["config_source"]
+        self.assertEqual(cs["extra_commands"], ["write memory", "show version"])
 
 
 class FetchConfigAPITests(APITestCase):

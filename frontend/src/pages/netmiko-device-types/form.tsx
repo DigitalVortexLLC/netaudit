@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ export function NetmikoDeviceTypeFormPage() {
   const [name, setName] = useState("");
   const [driver, setDriver] = useState("");
   const [defaultCommand, setDefaultCommand] = useState("");
+  const [extraCommands, setExtraCommands] = useState<string[]>([]);
   const [description, setDescription] = useState("");
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export function NetmikoDeviceTypeFormPage() {
       setName(deviceType.name);
       setDriver(deviceType.driver);
       setDefaultCommand(deviceType.default_command);
+      setExtraCommands(deviceType.extra_commands ?? []);
       setDescription(deviceType.description ?? "");
     }
   }, [isEditing, deviceType]);
@@ -44,6 +46,7 @@ export function NetmikoDeviceTypeFormPage() {
       name,
       driver,
       default_command: defaultCommand,
+      extra_commands: extraCommands.filter((cmd) => cmd.trim() !== ""),
       description: description || undefined,
     };
 
@@ -115,6 +118,47 @@ export function NetmikoDeviceTypeFormPage() {
                 placeholder="show running-config"
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Extra Commands</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExtraCommands([...extraCommands, ""])}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Command
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Additional commands to run after the main command (e.g. write memory, copy running-config startup-config)
+              </p>
+              {extraCommands.map((cmd, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    value={cmd}
+                    onChange={(e) =>
+                      setExtraCommands(
+                        extraCommands.map((c, i) => (i === index ? e.target.value : c))
+                      )
+                    }
+                    placeholder="e.g. write memory"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() =>
+                      setExtraCommands(extraCommands.filter((_, i) => i !== index))
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
             <div className="space-y-2">

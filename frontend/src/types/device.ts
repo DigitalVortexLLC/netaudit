@@ -13,6 +13,7 @@ export interface SshConfigSourceData {
   password?: string;
   ssh_key?: string;
   command_override?: string;
+  extra_commands?: string[];
   prompt_overrides?: Record<string, unknown>;
   timeout?: number;
 }
@@ -26,6 +27,7 @@ export interface ConfigSourceResponse {
   port?: number;
   username?: string;
   command_override?: string;
+  extra_commands?: string[];
   prompt_overrides?: Record<string, unknown>;
   timeout?: number;
 }

@@ -6,6 +6,7 @@ class NetmikoDeviceType(models.Model):
     name = models.CharField(max_length=255, unique=True)
     driver = models.CharField(max_length=100)
     default_command = models.CharField(max_length=500)
+    extra_commands = models.JSONField(default=list, blank=True)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -46,6 +47,7 @@ class SshConfigSource(ConfigSource):
     password = EncryptedCharField(max_length=255, blank=True, default="")
     ssh_key = EncryptedTextField(blank=True, default="")
     command_override = models.CharField(max_length=500, blank=True, default="")
+    extra_commands = models.JSONField(default=list, blank=True)
     prompt_overrides = models.JSONField(default=dict, blank=True)
     timeout = models.IntegerField(default=30)
 

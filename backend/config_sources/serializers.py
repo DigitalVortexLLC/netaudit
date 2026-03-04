@@ -11,6 +11,7 @@ class NetmikoDeviceTypeSerializer(serializers.ModelSerializer):
             "name",
             "driver",
             "default_command",
+            "extra_commands",
             "description",
             "created_at",
             "updated_at",
@@ -32,6 +33,7 @@ class SshConfigSourceSerializer(serializers.ModelSerializer):
             "password",
             "ssh_key",
             "command_override",
+            "extra_commands",
             "prompt_overrides",
             "timeout",
         ]
@@ -41,6 +43,7 @@ class SshConfigSourceSerializer(serializers.ModelSerializer):
             "hostname": {"required": False},
             "port": {"required": False},
             "command_override": {"required": False},
+            "extra_commands": {"required": False},
             "prompt_overrides": {"required": False},
             "timeout": {"required": False},
         }
@@ -61,6 +64,7 @@ class ConfigSourceField(serializers.Field):
                 "port": ssh.port,
                 "username": ssh.username,
                 "command_override": ssh.command_override,
+                "extra_commands": ssh.extra_commands,
                 "prompt_overrides": ssh.prompt_overrides,
                 "timeout": ssh.timeout,
             }

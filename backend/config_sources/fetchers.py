@@ -40,9 +40,15 @@ def fetch_config(device):
 
 
 def _fetch_ssh(ssh_source, device):
-    """Connect via netmiko and run the config dump command."""
+    """Connect via netmiko and run the config dump command.
+
+    After the primary command, any extra commands configured on the
+    SSH source (or inherited from the device type) are executed.
+    Their output is not included in the returned config text.
+    """
     ndt = ssh_source.netmiko_device_type
     command = ssh_source.command_override or ndt.default_command
+    extra_commands = ssh_source.extra_commands or ndt.extra_commands or []
 
     connect_params = {
         "device_type": ndt.driver,
@@ -65,6 +71,11 @@ def _fetch_ssh(ssh_source, device):
             if ssh_source.prompt_overrides:
                 send_kwargs.update(ssh_source.prompt_overrides)
             output = conn.send_command(command, **send_kwargs)
+
+            for extra_cmd in extra_commands:
+                logger.debug("Running extra command: %s", extra_cmd)
+                conn.send_command(extra_cmd, **send_kwargs)
+
         return output
     finally:
         if key_path:

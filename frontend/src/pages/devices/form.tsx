@@ -46,6 +46,7 @@ export function DeviceFormPage() {
   const [sshPassword, setSshPassword] = useState("");
   const [sshKey, setSshKey] = useState("");
   const [sshCommandOverride, setSshCommandOverride] = useState("");
+  const [sshExtraCommands, setSshExtraCommands] = useState<string[]>([]);
   const [sshPromptOverrides, setSshPromptOverrides] = useState("");
   const [sshTimeout, setSshTimeout] = useState(30);
 
@@ -65,6 +66,7 @@ export function DeviceFormPage() {
         setSshPort(device.config_source.port ?? 22);
         setSshUsername(device.config_source.username ?? "");
         setSshCommandOverride(device.config_source.command_override ?? "");
+        setSshExtraCommands(device.config_source.extra_commands ?? []);
         setSshPromptOverrides(
           device.config_source.prompt_overrides
             ? JSON.stringify(device.config_source.prompt_overrides, null, 2)
@@ -89,6 +91,7 @@ export function DeviceFormPage() {
         password: sshPassword || undefined,
         ssh_key: sshKey || undefined,
         command_override: sshCommandOverride || undefined,
+        extra_commands: sshExtraCommands.filter((cmd) => cmd.trim() !== ""),
         prompt_overrides: sshPromptOverrides ? JSON.parse(sshPromptOverrides) : undefined,
         timeout: sshTimeout,
       };
@@ -346,6 +349,47 @@ export function DeviceFormPage() {
                     onChange={(e) => setSshCommandOverride(e.target.value)}
                     placeholder="Overrides the device type default command"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Extra Commands (optional)</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSshExtraCommands([...sshExtraCommands, ""])}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Commands to run after config fetch. Overrides device type defaults if set.
+                  </p>
+                  {sshExtraCommands.map((cmd, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        value={cmd}
+                        onChange={(e) =>
+                          setSshExtraCommands(
+                            sshExtraCommands.map((c, i) => (i === index ? e.target.value : c))
+                          )
+                        }
+                        placeholder="e.g. write memory"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() =>
+                          setSshExtraCommands(sshExtraCommands.filter((_, i) => i !== index))
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
 
                 <div className="space-y-2">

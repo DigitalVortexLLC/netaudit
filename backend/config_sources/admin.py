@@ -5,7 +5,7 @@ from .models import ConfigSource, NetmikoDeviceType, SshConfigSource
 
 @admin.register(NetmikoDeviceType)
 class NetmikoDeviceTypeAdmin(admin.ModelAdmin):
-    list_display = ["name", "driver", "default_command", "created_at"]
+    list_display = ["name", "driver", "default_command", "extra_commands", "created_at"]
     search_fields = ["name", "driver"]
 
 

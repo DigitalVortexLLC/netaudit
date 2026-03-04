@@ -73,6 +73,25 @@ class NetmikoDeviceTypeTests(TestCase):
         names = list(NetmikoDeviceType.objects.values_list("name", flat=True))
         self.assertEqual(names, ["Arista EOS", "Cisco IOS", "Juniper Junos"])
 
+    def test_extra_commands_default_empty_list(self):
+        dt = NetmikoDeviceType.objects.create(
+            name="Cisco IOS",
+            driver="cisco_ios",
+            default_command="show running-config",
+        )
+        self.assertEqual(dt.extra_commands, [])
+
+    def test_extra_commands_stored(self):
+        cmds = ["write memory", "show version"]
+        dt = NetmikoDeviceType.objects.create(
+            name="Cisco IOS",
+            driver="cisco_ios",
+            default_command="show running-config",
+            extra_commands=cmds,
+        )
+        dt.refresh_from_db()
+        self.assertEqual(dt.extra_commands, cmds)
+
     def test_description_blank_allowed(self):
         dt = NetmikoDeviceType.objects.create(
             name="Cisco IOS",
@@ -173,6 +192,25 @@ class SshConfigSourceTests(TestCase):
             username="admin",
         )
         self.assertEqual(ssh.command_override, "")
+
+    def test_extra_commands_default_empty_list(self):
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+        )
+        self.assertEqual(ssh.extra_commands, [])
+
+    def test_extra_commands_stored(self):
+        cmds = ["write memory", "copy running-config startup-config"]
+        ssh = SshConfigSource.objects.create(
+            source_type="ssh",
+            netmiko_device_type=self.device_type,
+            username="admin",
+            extra_commands=cmds,
+        )
+        ssh.refresh_from_db()
+        self.assertEqual(ssh.extra_commands, cmds)
 
     def test_prompt_overrides_default_empty_dict(self):
         ssh = SshConfigSource.objects.create(
