@@ -151,248 +151,256 @@ export function DeviceFormPage() {
         <h1 className="text-2xl font-bold">{isEditing ? "Edit Device" : "New Device"}</h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-        {/* Basic Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Device Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="hostname">Hostname</Label>
-              <Input
-                id="hostname"
-                value={hostname}
-                onChange={(e) => setHostname(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="api_endpoint">API Endpoint (optional)</Label>
-              <Input
-                id="api_endpoint"
-                value={apiEndpoint}
-                onChange={(e) => setApiEndpoint(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="enabled"
-                checked={enabled}
-                onCheckedChange={(checked) => setEnabled(checked === true)}
-              />
-              <Label htmlFor="enabled">Enabled</Label>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Headers */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Headers</CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={addHeader}>
-              <Plus className="h-4 w-4" />
-              Add Header
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {headers.length === 0 && (
-              <p className="text-sm text-muted-foreground">No headers configured.</p>
-            )}
-            {headers.map((header, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <Input
-                  placeholder="Key"
-                  value={header.key}
-                  onChange={(e) => updateHeader(index, "key", e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  placeholder="Value"
-                  value={header.value}
-                  onChange={(e) => updateHeader(index, "value", e.target.value)}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => removeHeader(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Configuration Source */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Configuration Source</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="sourceType"
-                  value="none"
-                  checked={sourceType === "none"}
-                  onChange={() => setSourceType("none")}
-                  className="accent-primary"
-                />
-                <span className="text-sm">None</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="sourceType"
-                  value="ssh"
-                  checked={sourceType === "ssh"}
-                  onChange={() => setSourceType("ssh")}
-                  className="accent-primary"
-                />
-                <span className="text-sm">SSH</span>
-              </label>
-            </div>
-
-            {sourceType === "ssh" && (
-              <div className="space-y-4 pt-2">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Left Column */}
+          <div className="space-y-6">
+            {/* Basic Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Device Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ssh_device_type">Netmiko Device Type</Label>
-                  <select
-                    id="ssh_device_type"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    value={sshNetmikoDeviceType}
-                    onChange={(e) => setSshNetmikoDeviceType(Number(e.target.value))}
-                  >
-                    <option value={0}>Select a device type...</option>
-                    {deviceTypesData?.results.map((dt) => (
-                      <option key={dt.id} value={dt.id}>
-                        {dt.name} ({dt.driver})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ssh_hostname">SSH Hostname (optional)</Label>
+                  <Label htmlFor="name">Name</Label>
                   <Input
-                    id="ssh_hostname"
-                    value={sshHostname}
-                    onChange={(e) => setSshHostname(e.target.value)}
-                    placeholder="Defaults to device hostname"
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="ssh_port">Port</Label>
+                  <Label htmlFor="hostname">Hostname</Label>
                   <Input
-                    id="ssh_port"
-                    type="number"
-                    value={sshPort}
-                    onChange={(e) => setSshPort(Number(e.target.value))}
+                    id="hostname"
+                    value={hostname}
+                    onChange={(e) => setHostname(e.target.value)}
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="ssh_username">Username</Label>
+                  <Label htmlFor="api_endpoint">API Endpoint (optional)</Label>
                   <Input
-                    id="ssh_username"
-                    value={sshUsername}
-                    onChange={(e) => setSshUsername(e.target.value)}
+                    id="api_endpoint"
+                    value={apiEndpoint}
+                    onChange={(e) => setApiEndpoint(e.target.value)}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="ssh_password">Password</Label>
-                  <Input
-                    id="ssh_password"
-                    type="password"
-                    value={sshPassword}
-                    onChange={(e) => setSshPassword(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ssh_key">SSH Key</Label>
-                  <Textarea
-                    id="ssh_key"
-                    value={sshKey}
-                    onChange={(e) => setSshKey(e.target.value)}
-                    rows={4}
-                    placeholder="Paste private key here"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ssh_command_override">Command Override (optional)</Label>
-                  <Input
-                    id="ssh_command_override"
-                    value={sshCommandOverride}
-                    onChange={(e) => setSshCommandOverride(e.target.value)}
-                    placeholder="Overrides the device type default command"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ssh_prompt_overrides">Prompt Overrides (optional, JSON)</Label>
-                  <Textarea
-                    id="ssh_prompt_overrides"
-                    value={sshPromptOverrides}
-                    onChange={(e) => setSshPromptOverrides(e.target.value)}
-                    rows={3}
-                    placeholder='{"expect_string": "#"}'
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ssh_timeout">Timeout (seconds)</Label>
-                  <Input
-                    id="ssh_timeout"
-                    type="number"
-                    value={sshTimeout}
-                    onChange={(e) => setSshTimeout(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Groups */}
-        {groups.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Groups</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {groups.map((group) => (
-                <div key={group.id} className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <Checkbox
-                    id={`group-${group.id}`}
-                    checked={selectedGroups.includes(group.id)}
-                    onCheckedChange={() => toggleGroup(group.id)}
+                    id="enabled"
+                    checked={enabled}
+                    onCheckedChange={(checked) => setEnabled(checked === true)}
                   />
-                  <Label htmlFor={`group-${group.id}`}>{group.name}</Label>
+                  <Label htmlFor="enabled">Enabled</Label>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+
+            {/* Headers */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Headers</CardTitle>
+                <Button type="button" variant="outline" size="sm" onClick={addHeader}>
+                  <Plus className="h-4 w-4" />
+                  Add Header
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {headers.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No headers configured.</p>
+                )}
+                {headers.map((header, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      placeholder="Key"
+                      value={header.key}
+                      onChange={(e) => updateHeader(index, "key", e.target.value)}
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder="Value"
+                      value={header.value}
+                      onChange={(e) => updateHeader(index, "value", e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeHeader(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Groups */}
+            {groups.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Groups</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {groups.map((group) => (
+                    <div key={group.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`group-${group.id}`}
+                        checked={selectedGroups.includes(group.id)}
+                        onCheckedChange={() => toggleGroup(group.id)}
+                      />
+                      <Label htmlFor={`group-${group.id}`}>{group.name}</Label>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Configuration Source */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuration Source</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="sourceType"
+                      value="none"
+                      checked={sourceType === "none"}
+                      onChange={() => setSourceType("none")}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">None</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="sourceType"
+                      value="ssh"
+                      checked={sourceType === "ssh"}
+                      onChange={() => setSourceType("ssh")}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm">SSH</span>
+                  </label>
+                </div>
+
+                {sourceType === "ssh" && (
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="ssh_device_type">Netmiko Device Type</Label>
+                      <select
+                        id="ssh_device_type"
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        value={sshNetmikoDeviceType}
+                        onChange={(e) => setSshNetmikoDeviceType(Number(e.target.value))}
+                      >
+                        <option value={0}>Select a device type...</option>
+                        {deviceTypesData?.results.map((dt) => (
+                          <option key={dt.id} value={dt.id}>
+                            {dt.name} ({dt.driver})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ssh_hostname">SSH Hostname (optional)</Label>
+                      <Input
+                        id="ssh_hostname"
+                        value={sshHostname}
+                        onChange={(e) => setSshHostname(e.target.value)}
+                        placeholder="Defaults to device hostname"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ssh_port">Port</Label>
+                      <Input
+                        id="ssh_port"
+                        type="number"
+                        value={sshPort}
+                        onChange={(e) => setSshPort(Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ssh_username">Username</Label>
+                      <Input
+                        id="ssh_username"
+                        value={sshUsername}
+                        onChange={(e) => setSshUsername(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ssh_password">Password</Label>
+                      <Input
+                        id="ssh_password"
+                        type="password"
+                        value={sshPassword}
+                        onChange={(e) => setSshPassword(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ssh_key">SSH Key</Label>
+                      <Textarea
+                        id="ssh_key"
+                        value={sshKey}
+                        onChange={(e) => setSshKey(e.target.value)}
+                        rows={4}
+                        placeholder="Paste private key here"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ssh_command_override">Command Override (optional)</Label>
+                      <Input
+                        id="ssh_command_override"
+                        value={sshCommandOverride}
+                        onChange={(e) => setSshCommandOverride(e.target.value)}
+                        placeholder="Overrides the device type default command"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ssh_prompt_overrides">Prompt Overrides (optional, JSON)</Label>
+                      <Textarea
+                        id="ssh_prompt_overrides"
+                        value={sshPromptOverrides}
+                        onChange={(e) => setSshPromptOverrides(e.target.value)}
+                        rows={3}
+                        placeholder='{"expect_string": "#"}'
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ssh_timeout">Timeout (seconds)</Label>
+                      <Input
+                        id="ssh_timeout"
+                        type="number"
+                        value={sshTimeout}
+                        onChange={(e) => setSshTimeout(Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
         {/* Submit */}
         <div className="flex items-center gap-4">

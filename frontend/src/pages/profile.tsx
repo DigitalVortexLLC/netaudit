@@ -49,90 +49,92 @@ export function ProfilePage() {
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Profile</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label>Username</Label>
-              <p className="text-sm text-muted-foreground">{user.username}</p>
-            </div>
-            <div className="space-y-1">
-              <Label>Email</Label>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
-            </div>
-            <div className="space-y-1">
-              <Label>Role</Label>
-              <div>
-                <Badge variant="secondary">{user.role}</Badge>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Label>Username</Label>
+                <p className="text-sm text-muted-foreground">{user.username}</p>
+              </div>
+              <div className="space-y-1">
+                <Label>Email</Label>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
+              </div>
+              <div className="space-y-1">
+                <Label>Role</Label>
+                <div>
+                  <Badge variant="secondary">{user.role}</Badge>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>Member Since</Label>
+                <p className="text-sm text-muted-foreground">
+                  {new Date(user.date_joined).toLocaleDateString()}
+                </p>
               </div>
             </div>
-            <div className="space-y-1">
-              <Label>Member Since</Label>
-              <p className="text-sm text-muted-foreground">
-                {new Date(user.date_joined).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="current_password">Current Password</Label>
-              <Input
-                id="current_password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-              />
-            </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Change Password</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="current_password">Current Password</Label>
+                <Input
+                  id="current_password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="new_password1">New Password</Label>
-              <Input
-                id="new_password1"
-                type="password"
-                value={newPassword1}
-                onChange={(e) => setNewPassword1(e.target.value)}
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="new_password1">New Password</Label>
+                <Input
+                  id="new_password1"
+                  type="password"
+                  value={newPassword1}
+                  onChange={(e) => setNewPassword1(e.target.value)}
+                  required
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="new_password2">Confirm New Password</Label>
-              <Input
-                id="new_password2"
-                type="password"
-                value={newPassword2}
-                onChange={(e) => setNewPassword2(e.target.value)}
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="new_password2">Confirm New Password</Label>
+                <Input
+                  id="new_password2"
+                  type="password"
+                  value={newPassword2}
+                  onChange={(e) => setNewPassword2(e.target.value)}
+                  required
+                />
+              </div>
 
-            {successMessage && (
-              <p className="text-sm text-green-500">{successMessage}</p>
-            )}
+              {successMessage && (
+                <p className="text-sm text-green-500">{successMessage}</p>
+              )}
 
-            {errorMessage && (
-              <p className="text-sm text-destructive">{errorMessage}</p>
-            )}
+              {errorMessage && (
+                <p className="text-sm text-destructive">{errorMessage}</p>
+              )}
 
-            <Button type="submit" disabled={saving}>
-              <Save className="h-4 w-4" />
-              {saving ? "Saving..." : "Change Password"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <Button type="submit" disabled={saving}>
+                <Save className="h-4 w-4" />
+                {saving ? "Saving..." : "Change Password"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
