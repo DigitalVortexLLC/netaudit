@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Server, FolderTree, Shield, Code,
   ClipboardCheck, Clock, Settings, LogOut, UserCircle, Search, ChevronDown, Terminal,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,6 +71,7 @@ const navItems: NavItem[] = [
       { label: "Schedules", href: "/schedules", icon: Clock },
     ],
   },
+  { label: "API Docs", href: "/api-docs", icon: BookOpen },
 ];
 
 function isDirectActive(pathname: string, item: NavDirect): boolean {

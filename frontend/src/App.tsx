@@ -32,6 +32,7 @@ import { UserEditPage } from "@/pages/users/edit";
 import { ProfilePage } from "@/pages/profile";
 import { NetmikoDeviceTypeListPage } from "@/pages/netmiko-device-types/list";
 import { NetmikoDeviceTypeFormPage } from "@/pages/netmiko-device-types/form";
+import { ApiDocsPage } from "@/pages/api-docs";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +84,7 @@ export default function App() {
                 <Route path="/users" element={<UserListPage />} />
                 <Route path="/users/:id/edit" element={<UserEditPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/api-docs" element={<ApiDocsPage />} />
               </Route>
             </Route>
 
