@@ -7,13 +7,9 @@ type MessageHandler = (data: Record<string, unknown>) => void;
 
 function getWsBaseUrl(): string {
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-  // Derive WebSocket URL from API URL
-  const url = new URL(apiUrl);
+  // Resolve relative URLs against the current origin
+  const url = new URL(apiUrl, window.location.origin);
   const wsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
-  // In dev with Vite proxy, connect to same origin
-  if (import.meta.env.DEV) {
-    return `${wsProtocol}//${window.location.host}`;
-  }
   return `${wsProtocol}//${url.host}`;
 }
 
