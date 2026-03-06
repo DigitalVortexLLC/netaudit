@@ -1,8 +1,0 @@
-{% load badge_tags %}
-{% if audit_run.status != "completed" and audit_run.status != "failed" %}
-<div hx-get="{% url 'auditrun-status-fragment' audit_run.pk %}" hx-trigger="load delay:3s" hx-swap="outerHTML">
-    {{ audit_run.status|badge }} <span class="spinner"></span>
-</div>
-{% else %}
-{{ audit_run.status|badge }}
-{% endif %}
